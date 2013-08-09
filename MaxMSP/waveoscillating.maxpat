@@ -105,7 +105,6 @@
 						"description" : "",
 						"digest" : "",
 						"tags" : "",
-						"visible" : 1,
 						"boxes" : [ 							{
 								"box" : 								{
 									"fontname" : "Arial",
@@ -1081,6 +1080,7 @@
 						"description" : "",
 						"digest" : "",
 						"tags" : "",
+						"visible" : 1,
 						"boxes" : [ 							{
 								"box" : 								{
 									"fontname" : "Arial",
@@ -1285,6 +1285,7 @@
 									"destination" : [ "obj-44", 1 ],
 									"disabled" : 0,
 									"hidden" : 0,
+									"midpoints" : [ 88.5, 147.0, 62.0, 147.0, 62.0, 378.0, 127.5, 378.0 ],
 									"source" : [ "obj-4", 0 ]
 								}
 
@@ -1348,6 +1349,7 @@
 									"destination" : [ "obj-52", 1 ],
 									"disabled" : 0,
 									"hidden" : 0,
+									"midpoints" : [ 88.5, 180.0, 72.0, 180.0, 72.0, 255.0, 122.5, 255.0 ],
 									"source" : [ "obj-47", 0 ]
 								}
 
