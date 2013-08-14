@@ -11,23 +11,21 @@
 
 /* Define constants and defaults */
 
-#define OSCIL_DEFAULT_TABLESIZE 8192
-#define OSCIL_DEFAULT_HARMS 10
-#define OSCIL_MAX_HARMS 1024
-#define OSCIL_DEFAULT_FREQUENCY 440.0
-#define OSCIL_DEFAULT_WAVEFORM "sine"
-#define OSCIL_MAX_TABLESIZE 1048576
-#define OSCIL_NOFADE 0
-#define OSCIL_LINEAR 1
-#define OSCIL_POWER 2
+#define OSCILOSCIL_DEFAULT_TABLESIZE 8192
+#define OSCILOSCIL_DEFAULT_HARMS 10
+#define OSCILOSCIL_MAX_HARMS 1024
+#define OSCILOSCIL_DEFAULT_FREQUENCY 440.0
+#define OSCILOSCIL_DEFAULT_WAVEFORM "sine"
+#define OSCILOSCIL_MAX_TABLESIZE 1048576
+
 
 /* The class pointer */
 
-static t_class *oscil_class;
+static t_class *osciloscil_class;
 
 /* The object structure */
 
-typedef struct _oscil
+typedef struct _osciloscil
 {
 	t_object obj; // the Pd object
 	t_float x_f; // internally convert floats to signals
@@ -45,77 +43,63 @@ typedef struct _oscil
 	float sr; // sampling rate
 	long wavetable_bytes;// number of bytes stored in wavetable
 	long amplitude_bytes;// number of bytes stored in amplitude table
-	float xfade_duration; // duration of the crossfade in milliseconds
-	int xfade_samples; // number of samples in the crossfade
-	int xfade_countdown; // current sample count for the crossfade
-	short xfadetype; // the crossfade type  
-	short firsttime; // initialization flag for the crossfade
 	float *old_wavetable;// older wave table
 	short dirty;// flag that wavetable is dirty
-} t_oscil;
+} t_osciloscil;
 
 /* Function prototypes */
 
-void *oscil_new(t_symbol *s, short argc, t_atom *argv);
-t_int *oscil_perform(t_int *w);
-void oscil_dsp(t_oscil *x, t_signal **sp, short *count);
-void oscil_build_waveform( t_oscil *x );
-void oscil_mute(t_oscil *x, t_floatarg toggle);
-void oscil_assist(t_oscil *x, void *b, long msg, long arg, char *dst);
-void oscil_sine(t_oscil *x);
-void oscil_triangle(t_oscil *x);
-void oscil_square(t_oscil *x);
-void oscil_sawtooth(t_oscil *x);
-void oscil_pulse(t_oscil *x);
-void oscil_list (t_oscil *x, t_symbol *msg, short argc, t_atom *argv);
-void oscil_fadetime (t_oscil *x, t_floatarg fade_ms);
-void oscil_fadetype(t_oscil *x, t_floatarg ftype);
-void oscil_free(t_oscil *x);
+void *osciloscil_new(t_symbol *s, short argc, t_atom *argv);
+t_int *osciloscil_perform(t_int *w);
+void osciloscil_dsp(t_osciloscil *x, t_signal **sp, short *count);
+void osciloscil_build_waveform( t_osciloscil *x );
+void osciloscil_mute(t_osciloscil *x, t_floatarg toggle);
+void osciloscil_assist(t_osciloscil *x, void *b, long msg, long arg, char *dst);
+void osciloscil_sine(t_osciloscil *x);
+void osciloscil_triangle(t_osciloscil *x);
+void osciloscil_square(t_osciloscil *x);
+void osciloscil_sawtooth(t_osciloscil *x);
+void osciloscil_pulse(t_osciloscil *x);
+void osciloscil_list (t_osciloscil *x, t_symbol *msg, short argc, t_atom *argv);
+void osciloscil_free(t_osciloscil *x);
 
 /* The object setup function */
 
-void oscil_tilde_setup (void)
+void osciloscil_tilde_setup (void)
 {
 	t_class * c;
-	oscil_class = class_new( gensym("oscil~"), (t_newmethod) oscil_new, (t_method)oscil_free, sizeof(t_oscil), 0, A_GIMME, 0);
-	CLASS_MAINSIGNALIN(oscil_class, t_oscil, x_f);
-	c = oscil_class;
-	class_addmethod(c,(t_method)oscil_dsp, gensym("dsp"),0);
-	class_addmethod(c,(t_method)oscil_sine, gensym("sine"), 0);
-	class_addmethod(c,(t_method)oscil_triangle, gensym("triangle"), 0);
-	class_addmethod(c,(t_method)oscil_square, gensym("square"), 0);
-	class_addmethod(c,(t_method)oscil_sawtooth, gensym("sawtooth"), 0);
-	class_addmethod(c,(t_method)oscil_pulse, gensym("pulse"), 0);
-	class_addmethod(c,(t_method)oscil_list, gensym("list"), A_GIMME, 0);
-	class_addmethod(c,(t_method)oscil_fadetime, gensym("fadetime"), A_FLOAT, 0);
-	class_addmethod(c,(t_method)oscil_fadetype, gensym("fadetype"), A_FLOAT, 0);
-	post("oscil~ from \"Designing Audio Objects\" by Eric Lyon");
+	osciloscil_class = class_new( gensym("osciloscil~"), (t_newmethod) osciloscil_new, (t_method)osciloscil_free, sizeof(t_osciloscil), 0, A_GIMME, 0);
+	CLASS_MAINSIGNALIN(osciloscil_class, t_osciloscil, x_f);
+	c = osciloscil_class;
+	class_addmethod(c,(t_method)osciloscil_dsp, gensym("dsp"),0);
+	class_addmethod(c,(t_method)osciloscil_sine, gensym("sine"), 0);
+	class_addmethod(c,(t_method)osciloscil_triangle, gensym("triangle"), 0);
+	class_addmethod(c,(t_method)osciloscil_square, gensym("square"), 0);
+	class_addmethod(c,(t_method)osciloscil_sawtooth, gensym("sawtooth"), 0);
+	class_addmethod(c,(t_method)osciloscil_pulse, gensym("pulse"), 0);
+	class_addmethod(c,(t_method)osciloscil_list, gensym("list"), A_GIMME, 0);
 }
 
 /* The new instance routine */
 
-void *oscil_new(t_symbol *s, short argc, t_atom *argv)
+void *osciloscil_new(t_symbol *s, short argc, t_atom *argv)
 {
 	float init_freq; 
 	
 	/* Instantiate the object */
 	
-	t_oscil *x = (t_oscil *) pd_new(oscil_class);
+	t_osciloscil *x = (t_osciloscil *) pd_new(osciloscil_class);
 	
 	/* Create one outlet */
 	
 	outlet_new(&x->obj, gensym("signal"));
 		
-	/* Turn on the firsttime flag */
-	
-	x->firsttime = 1;
-	
 	/* Initialize the object with default parameters */ 
 	
-	init_freq = OSCIL_DEFAULT_FREQUENCY;
-	x->table_length = OSCIL_DEFAULT_TABLESIZE;
-	x->bl_harms = OSCIL_DEFAULT_HARMS;
-	x->waveform = gensym(OSCIL_DEFAULT_WAVEFORM);
+	init_freq = OSCILOSCIL_DEFAULT_FREQUENCY;
+	x->table_length = OSCILOSCIL_DEFAULT_TABLESIZE;
+	x->bl_harms = OSCILOSCIL_DEFAULT_HARMS;
+	x->waveform = gensym(OSCILOSCIL_DEFAULT_WAVEFORM);
 	x->dirty = 0;
 	
 	/* Read any user-specified parameters */
@@ -132,15 +116,15 @@ void *oscil_new(t_symbol *s, short argc, t_atom *argv)
 	 */
 	
 	if(fabs(init_freq) > 1000000){
-		init_freq = OSCIL_DEFAULT_FREQUENCY;
+		init_freq = OSCILOSCIL_DEFAULT_FREQUENCY;
 		post("bad freq reset");
 	}
-	if(x->table_length < 4 || x->table_length > OSCIL_MAX_TABLESIZE){
-		x->table_length = OSCIL_DEFAULT_TABLESIZE;
+	if(x->table_length < 4 || x->table_length > OSCILOSCIL_MAX_TABLESIZE){
+		x->table_length = OSCILOSCIL_DEFAULT_TABLESIZE;
 	}
-	if(x->bl_harms < 1 || x->bl_harms > OSCIL_MAX_HARMS){
+	if(x->bl_harms < 1 || x->bl_harms > OSCILOSCIL_MAX_HARMS){
 		post("bad harms reset from: %d", x->bl_harms);
-		x->bl_harms = OSCIL_DEFAULT_HARMS;
+		x->bl_harms = OSCILOSCIL_DEFAULT_HARMS;
 
 	}
 	
@@ -156,7 +140,7 @@ void *oscil_new(t_symbol *s, short argc, t_atom *argv)
 	
 	x->wavetable_bytes = x->table_length * sizeof(float);
 	x->wavetable = (float *) getbytes(x->wavetable_bytes);
-	x->amplitude_bytes = OSCIL_MAX_HARMS * sizeof(float);
+	x->amplitude_bytes = OSCILOSCIL_MAX_HARMS * sizeof(float);
 	x->amplitudes = (float *) getbytes(x->amplitude_bytes);
 	x->old_wavetable = (float *) getbytes(x->wavetable_bytes);
 	
@@ -183,34 +167,22 @@ void *oscil_new(t_symbol *s, short argc, t_atom *argv)
 	x->si_factor = (float) x->table_length / x->sr;
 	x->si = init_freq * x->si_factor ;
 	
-	
-	/* Initialize fade parameters */
-	
-	x->xfade_countdown = 0;
-	x->xfade_duration = 1000.;
-	x->xfade_samples = x->xfade_duration * x->sr / 1000.0;
-	x->xfadetype = OSCIL_LINEAR;
-	
 	/* Branch to the appropriate method to initialize the waveform */
 	
 	if (x->waveform == gensym("sine")) {
-		oscil_sine(x);
+		osciloscil_sine(x);
 	} else if (x->waveform == gensym("triangle")) {
-		oscil_triangle(x);
+		osciloscil_triangle(x);
 	} else if (x->waveform == gensym("square")) {
-		oscil_square(x);
+		osciloscil_square(x);
 	} else if (x->waveform == gensym("sawtooth")) {
-		oscil_sawtooth(x);
+		osciloscil_sawtooth(x);
 	} else if (x->waveform == gensym("pulse")) {
-		oscil_pulse(x);
+		osciloscil_pulse(x);
 	} else {
 		error("%s is not a legal waveform - using sine wave instead", x->waveform->s_name);
-		oscil_sine(x);
+		osciloscil_sine(x);
 	}
-	
-	/* Turn off firsttime flag now that the waveform has been initialized */
-	
-	x->firsttime = 0;
 	
 	/* Return a pointer to the object */
 	
@@ -219,7 +191,7 @@ void *oscil_new(t_symbol *s, short argc, t_atom *argv)
 
 /* The sine method */
 
-void oscil_sine(t_oscil *x)
+void osciloscil_sine(t_osciloscil *x)
 {
 	/* No DC component */
 	
@@ -235,12 +207,12 @@ void oscil_sine(t_oscil *x)
 	
 	/* Build the waveform */
 	
-	oscil_build_waveform(x);
+	osciloscil_build_waveform(x);
 }
 
 /* The triangle method */
 
-void oscil_triangle(t_oscil *x)
+void osciloscil_triangle(t_osciloscil *x)
 {
 	int i;
 	float sign = 1.0;
@@ -269,12 +241,12 @@ void oscil_triangle(t_oscil *x)
 	
 	/* Build the waveform */
 	
-	oscil_build_waveform(x);
+	osciloscil_build_waveform(x);
 }
 
 /* The sawtooth method */
 
-void oscil_sawtooth(t_oscil *x)
+void osciloscil_sawtooth(t_osciloscil *x)
 {
 	int i;
 	float sign = 1.0;
@@ -291,12 +263,12 @@ void oscil_sawtooth(t_oscil *x)
 		x->amplitudes[i] = sign * 1.0/(float)i;
 		sign *= -1. ;
 	}
-	oscil_build_waveform(x);
+	osciloscil_build_waveform(x);
 }
 
 /* The square method */
 
-void oscil_square(t_oscil *x)
+void osciloscil_square(t_osciloscil *x)
 {
 	int i;
 	x-> amplitudes [0] = 0.0;
@@ -305,13 +277,13 @@ void oscil_square(t_oscil *x)
 		x->amplitudes[i] = 1.0/(float)i;
 		x->amplitudes[i + 1] = 0.0;
 	}
-	oscil_build_waveform(x);
+	osciloscil_build_waveform(x);
 }
 
 
 /* The pulse method */
 
-void oscil_pulse(t_oscil *x)
+void osciloscil_pulse(t_osciloscil *x)
 {
 	int i;
 	x->amplitudes[0] = 0.0;
@@ -325,12 +297,12 @@ void oscil_pulse(t_oscil *x)
 	for(i = 1 ; i < x->bl_harms; i++){
 		x->amplitudes[i] = 1.0;
 	}
-	oscil_build_waveform(x);
+	osciloscil_build_waveform(x);
 }
 
 /* The list method */
 
-void oscil_list (t_oscil *x, t_symbol *msg, short argc, t_atom *argv)
+void osciloscil_list (t_osciloscil *x, t_symbol *msg, short argc, t_atom *argv)
 {
 	short i;
 	int harmonic_count = 0;
@@ -338,19 +310,26 @@ void oscil_list (t_oscil *x, t_symbol *msg, short argc, t_atom *argv)
 	
 	/* Read the list of harmonic weightings from the calling message */
 	
-	for (i=0; i < argc; i++) {
-		amplitudes[harmonic_count++] = atom_getfloat(argv + i);
+	for (i=0; i < argc; i++) 
+    {
+        if (argv[i].a_type == A_FLOAT ){
+
+            amplitudes[harmonic_count++] = atom_getfloat(argv + i);
+            post("fa");
+        }
+        else
+            post("yoze");
 	}
 	
 	/* Set the harmonic count to the number of weightings read */
 	
 	x->harmonic_count = harmonic_count;
-	oscil_build_waveform(x);
+	osciloscil_build_waveform(x);
 }
 
 /* The utility function to build the waveform */
 
-void oscil_build_waveform(t_oscil *x) {
+void osciloscil_build_waveform(t_osciloscil *x) {
 	float rescale;
 	int i, j;
 	float max;
@@ -371,26 +350,16 @@ void oscil_build_waveform(t_oscil *x) {
 	}
 	
 	/* 
-	 Set the dirty flag, so that the oscillator will read from the old
+	 Set the dirty flag, so that the osciloscillator will read from the old
 	 wavetable until the new one has been generated.
 	 */
 	
 	x->dirty = 1;
 	
-	/* 
-	 Reset the fade countdown, if the fadetype is not NOFADE, 
-	 and this is not first time the function has been called.
-	 */
-	
-	
-	if( x->xfadetype  && ! x->firsttime){
-		x->xfade_countdown = x->xfade_samples; 
-	}	
-	
 	/* Check for an empty set of weightings */
 	
 	if(partial_count < 1){
-		error("oscil~: no harmonics specified, waveform not created.");
+		error("osciloscil~: no harmonics specified, waveform not created.");
 		return;
 	}
 	
@@ -401,7 +370,7 @@ void oscil_build_waveform(t_oscil *x) {
 		max += fabs(amplitudes[i]);
 	}
 	if(! max){
-		error("oscil~: all zero function specified, waveform not created.");
+		error("osciloscil~: all zero function specified, waveform not created.");
 		return; 
 	}
 	
@@ -439,7 +408,7 @@ void oscil_build_waveform(t_oscil *x) {
 	/* The following should never happen but it's easy enough to check */
 	
 	if(max == 0.0) {
-		post("oscil~: weird all zero error - exiting!");
+		post("osciloscil~: weird all zero error - exiting!");
 		return;
 	}
 	
@@ -455,58 +424,16 @@ void oscil_build_waveform(t_oscil *x) {
 	x->dirty = 0; 
 }
 
-/* The fadetime method */
-
-void oscil_fadetime (t_oscil *x, t_floatarg fade_ms)
-{
-	/* Check that the fade time is legal */
-	
-	if(fade_ms < 0.0 || fade_ms > 600000.0){
-		error("%f is not a legal fade time", fade_ms);
-		fade_ms = 50.;
-	}
-	
-	/* Store the fade time duration in milliseconds */
-	
-	x->xfade_duration = fade_ms;
-	
-	/* Convert from milliseconds to samples */
-	
-	x->xfade_samples = x->xfade_duration * x->sr / 1000.0;
-}
-
-/* The fade type method */
-
-void oscil_fadetype(t_oscil *x, t_floatarg ftype)
-{
-	if(ftype < 0 || ftype > 2) {
-		error("unknown type of fade, selecting no fade");
-		ftype = 0;
-	}
-	
-	/* Type conversion from float to short */
-	
-	x->xfadetype = (short) ftype;
-}
 
 /* The perform routine */
 
-t_int *oscil_perform(t_int *w)
+t_int *osciloscil_perform(t_int *w)
 {
-	/* Copy the object pointer to a local variable  */
 	
-	t_oscil *x = (t_oscil *) (w[1]);
-	
-	/* Copy the inlet and outlet pointers to local variables */
-	
+	t_osciloscil *x = (t_osciloscil *) (w[1]);
 	float *frequency = (t_float *)(w[2]);
 	float *out = (t_float *)(w[3]);
-	
-	/* Copy the signal vector size to a local variable */
-	
 	int n = w[4];
-	
-	/* Dereference oscil~ object components */
 	
 	float si_factor = x->si_factor;
 	float si = x->si;
@@ -514,17 +441,10 @@ t_int *oscil_perform(t_int *w)
 	int table_length = x->table_length;
 	float *wavetable = x->wavetable;
 	float *old_wavetable = x->old_wavetable;
-	int xfade_countdown = x->xfade_countdown;
-	int xfade_samples = x->xfade_samples;
-	short xfadetype = x->xfadetype;
 	float piotwo = x->piotwo;
-	
-	/* local variables */
 	
 	long iphase;
 	float fraction;	
-	
-	/* Perform the DSP loop */
 	
 	while (n--) {
 		
@@ -544,28 +464,6 @@ t_int *oscil_perform(t_int *w)
 		if(x->dirty){
 			*out++ = old_wavetable[iphase];
 		} 
-		
-		/* This block only executed during a crossfade */
-		
-		else if (xfade_countdown > 0) { 
-			fraction = (float)xfade_countdown--/(float)xfade_samples;
-			if(xfadetype == OSCIL_LINEAR){
-				*out++ = wavetable[iphase] + fraction * 	   
-				(old_wavetable[iphase] - wavetable[iphase]);
-			} 
-			else if (xfadetype == OSCIL_POWER) {
-				
-				/* 
-				 Scale the fraction so that the cos() and sin() 
-				 lookups are constrained to the first quadrant 
-				 of the Unit Circle.
-				 */
-				
-				fraction *= piotwo; 
-				*out++ = sin(fraction) * old_wavetable[iphase] + 
-				cos(fraction) * wavetable[iphase];
-			}
-		}	
 		else {
 			*out++ = wavetable[iphase];	
 		}	
@@ -584,9 +482,8 @@ t_int *oscil_perform(t_int *w)
 		}
 	}
 	
-	/* Store the current phase and crossfade countdown */
+	/* Store the current phase */
 	
-	x->xfade_countdown = xfade_countdown;
 	x->phase = phase;
 	
 	/* Return the next address on the DSP chain */
@@ -596,16 +493,16 @@ t_int *oscil_perform(t_int *w)
 
 /* The free routine */
 
-void oscil_free(t_oscil *x)
+void osciloscil_free(t_osciloscil *x)
 {
 	t_freebytes(x->wavetable, x->wavetable_bytes);
 	t_freebytes(x->old_wavetable, x->wavetable_bytes);
-	t_freebytes(x->amplitudes, OSCIL_MAX_HARMS * sizeof(float));
+	t_freebytes(x->amplitudes, OSCILOSCIL_MAX_HARMS * sizeof(float));
 }
 
 /* The DSP routine */
 
-void oscil_dsp(t_oscil *x, t_signal **sp, short *count)
+void osciloscil_dsp(t_osciloscil *x, t_signal **sp, short *count)
 {
 	
 	if(x->sr != sp[0]->s_sr){
@@ -618,7 +515,5 @@ void oscil_dsp(t_oscil *x, t_signal **sp, short *count)
 		x->si_factor = (float) x->table_length / x->sr;
 	}
 	
-	dsp_add(oscil_perform, 4, x, sp[0]->s_vec, sp[1]->s_vec, sp[0]->s_n);
+	dsp_add(osciloscil_perform, 4, x, sp[0]->s_vec, sp[1]->s_vec, sp[0]->s_n);
 }
-
-

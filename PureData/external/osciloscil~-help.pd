@@ -1,0 +1,47 @@
+#N canvas 230 22 653 427 10;
+#X floatatom 19 146 5 0 0 1 freq - -;
+#X obj 19 318 dac~;
+#X msg 89 305 \; pd dsp \$1;
+#X obj 89 278 tgl 15 0 empty empty empty 0 -6 0 8 -262144 -1 -1 0 1
+;
+#X floatatom 218 243 5 0 0 0 - - -;
+#X obj 221 224 hsl 128 15 0 0.2 0 0 empty empty gain -2 -6 0 8 -261836
+-1 -1 0 1;
+#X obj 19 101 loadbang;
+#X msg 19 122 220;
+#X msg 180 59 square;
+#X msg 181 98 triangle;
+#X msg 180 40 sine;
+#X msg 180 79 sawtooth;
+#X msg 181 116 pulse;
+#X obj 19 256 *~ 0.01;
+#X msg 349 50 0 0 0.1 0 0.25 0.5 0 0 0.3 0.1 0.05;
+#X msg 364 76 0 0.1 0.3 0 0 0 0 0.5 0 0 0.7 0 0 0.2 0.1;
+#X msg 374 98 0 0.1 0.1 1 1 0.1 0.1;
+#X msg 384 120 0 1 0.5 0.25 0.125 0.0625;
+#X text 320 31 list relative weights of harmonics \, starting with
+DC;
+#X msg 388 142 0 1;
+#X text 414 143 this is a sine wave;
+#X obj 19 228 osciloscil~ 220 8192 square 16;
+#X msg 389 164 0 0 0 0;
+#X connect 0 0 21 0;
+#X connect 3 0 2 0;
+#X connect 4 0 13 1;
+#X connect 5 0 4 0;
+#X connect 6 0 7 0;
+#X connect 7 0 0 0;
+#X connect 8 0 21 0;
+#X connect 9 0 21 0;
+#X connect 10 0 21 0;
+#X connect 11 0 21 0;
+#X connect 12 0 21 0;
+#X connect 13 0 1 0;
+#X connect 13 0 1 1;
+#X connect 14 0 21 0;
+#X connect 15 0 21 0;
+#X connect 16 0 21 0;
+#X connect 17 0 21 0;
+#X connect 19 0 21 0;
+#X connect 21 0 13 0;
+#X connect 22 0 21 0;
