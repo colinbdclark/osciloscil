@@ -45,6 +45,7 @@ typedef struct _osciloscil
 	long amplitude_bytes;// number of bytes stored in amplitude table
 	float *old_wavetable;// older wave table
 	short dirty;// flag that wavetable is dirty
+    float f_pan;
 } t_osciloscil;
 
 /* Function prototypes */
@@ -89,7 +90,10 @@ void *osciloscil_new(t_symbol *s, short argc, t_atom *argv)
 	/* Instantiate the object */
 	
 	t_osciloscil *x = (t_osciloscil *) pd_new(osciloscil_class);
-	
+
+    inlet_new(&x->obj, &x->obj.ob_pd,gensym("signal"), gensym("signal"));
+    inlet_new(&x->obj, &x->obj.ob_pd,gensym("signal"), gensym("signal"));
+    
 	/* Create one outlet */
 	
 	outlet_new(&x->obj, gensym("signal"));
@@ -432,8 +436,10 @@ t_int *osciloscil_perform(t_int *w)
 	
 	t_osciloscil *x = (t_osciloscil *) (w[1]);
 	float *frequency = (t_float *)(w[2]);
-	float *out = (t_float *)(w[3]);
-	int n = w[4];
+	float *phases= (t_float *)(w[3]);
+	float *waves= (t_float *)(w[4]);
+	float *out = (t_float *)(w[5]);
+	int n = w[6];
 	
 	float si_factor = x->si_factor;
 	float si = x->si;
@@ -488,7 +494,7 @@ t_int *osciloscil_perform(t_int *w)
 	
 	/* Return the next address on the DSP chain */
 	
-	return w + 5;
+	return w + 7;
 }
 
 /* The free routine */
@@ -515,5 +521,5 @@ void osciloscil_dsp(t_osciloscil *x, t_signal **sp, short *count)
 		x->si_factor = (float) x->table_length / x->sr;
 	}
 	
-	dsp_add(osciloscil_perform, 4, x, sp[0]->s_vec, sp[1]->s_vec, sp[0]->s_n);
+	dsp_add(osciloscil_perform, 6, x, sp[0]->s_vec, sp[1]->s_vec, sp[2]->s_vec,sp[3]->s_vec, sp[0]->s_n);
 }
