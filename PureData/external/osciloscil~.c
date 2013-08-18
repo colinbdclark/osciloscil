@@ -1,23 +1,10 @@
-/****************************************************
- *   This code is explicated in Chapter 5 of        *
- *   "Designing Audio Objects for Max/MSP and Pd"   *
- *   by Eric Lyon.                                  *   
- ****************************************************/
-
-/* Required header files */
-
 #include "m_pd.h"
 #include "math.h"
 
 /* Define constants and defaults */
-
 #define OSCILOSCIL_DEFAULT_TABLESIZE 8192
-#define OSCILOSCIL_DEFAULT_HARMS 10
-#define OSCILOSCIL_MAX_HARMS 1024
-#define OSCILOSCIL_DEFAULT_FREQUENCY 440.0
 #define OSCILOSCIL_DEFAULT_WAVEFORM "sine"
 #define OSCILOSCIL_MAX_TABLESIZE 1048576
-
 
 /* The class pointer */
 
@@ -31,21 +18,17 @@ typedef struct _osciloscil
 	t_float x_f; // internally convert floats to signals
 	long table_length; // length of wavetable
 	float *wavetable; // wavetable
-	float *amplitudes; // list of amplitudes for each harmonic
 	t_symbol *waveform; // the waveform used currently
-	long harmonic_count; // number of harmonics
 	float phase; // wavetable phase
 	float si; // sampling increment
 	float si_factor; // factor for generating the sampling increment
-	long bl_harms; // number of harmonics for band limited waveforms
 	float piotwo; // pi over two
 	float twopi; // two pi
 	float sr; // sampling rate
+
 	long wavetable_bytes;// number of bytes stored in wavetable
-	long amplitude_bytes;// number of bytes stored in amplitude table
 	float *old_wavetable;// older wave table
 	short dirty;// flag that wavetable is dirty
-    float f_pan;
 } t_osciloscil;
 
 /* Function prototypes */
@@ -54,8 +37,9 @@ void *osciloscil_new(t_symbol *s, short argc, t_atom *argv);
 t_int *osciloscil_perform(t_int *w);
 void osciloscil_dsp(t_osciloscil *x, t_signal **sp, short *count);
 void osciloscil_build_waveform( t_osciloscil *x );
-void osciloscil_mute(t_osciloscil *x, t_floatarg toggle);
-void osciloscil_assist(t_osciloscil *x, void *b, long msg, long arg, char *dst);
+
+//void osciloscil_assist(t_osciloscil *x, void *b, long msg, long arg, char *dst);
+
 void osciloscil_sine(t_osciloscil *x);
 void osciloscil_triangle(t_osciloscil *x);
 void osciloscil_square(t_osciloscil *x);
@@ -73,6 +57,7 @@ void osciloscil_tilde_setup (void)
 	CLASS_MAINSIGNALIN(osciloscil_class, t_osciloscil, x_f);
 	c = osciloscil_class;
 	class_addmethod(c,(t_method)osciloscil_dsp, gensym("dsp"),0);
+
 	class_addmethod(c,(t_method)osciloscil_sine, gensym("sine"), 0);
 	class_addmethod(c,(t_method)osciloscil_triangle, gensym("triangle"), 0);
 	class_addmethod(c,(t_method)osciloscil_square, gensym("square"), 0);
@@ -100,9 +85,7 @@ void *osciloscil_new(t_symbol *s, short argc, t_atom *argv)
 		
 	/* Initialize the object with default parameters */ 
 	
-	init_freq = OSCILOSCIL_DEFAULT_FREQUENCY;
 	x->table_length = OSCILOSCIL_DEFAULT_TABLESIZE;
-	x->bl_harms = OSCILOSCIL_DEFAULT_HARMS;
 	x->waveform = gensym(OSCILOSCIL_DEFAULT_WAVEFORM);
 	x->dirty = 0;
 	
@@ -144,8 +127,6 @@ void *osciloscil_new(t_symbol *s, short argc, t_atom *argv)
 	
 	x->wavetable_bytes = x->table_length * sizeof(float);
 	x->wavetable = (float *) getbytes(x->wavetable_bytes);
-	x->amplitude_bytes = OSCILOSCIL_MAX_HARMS * sizeof(float);
-	x->amplitudes = (float *) getbytes(x->amplitude_bytes);
 	x->old_wavetable = (float *) getbytes(x->wavetable_bytes);
 	
 	/*
@@ -197,19 +178,6 @@ void *osciloscil_new(t_symbol *s, short argc, t_atom *argv)
 
 void osciloscil_sine(t_osciloscil *x)
 {
-	/* No DC component */
-	
-	x->amplitudes[0] = 0.0;
-	
-	/* All the energy is in the first harmonic */
-	
-	x->amplitudes[1] = 1.0;
-	
-	/* In this special case, there is only one harmonic */
-	
-	x->harmonic_count = 1;
-	
-	/* Build the waveform */
 	
 	osciloscil_build_waveform(x);
 }
@@ -218,30 +186,6 @@ void osciloscil_sine(t_osciloscil *x)
 
 void osciloscil_triangle(t_osciloscil *x)
 {
-	int i;
-	float sign = 1.0;
-	
-	/* No DC component */
-	
-	x-> amplitudes [0] = 0.0; 
-	
-	/* Set the number of harmonics */
-	
-	x->harmonic_count = x->bl_harms;
-	
-	/* 
-	 Set the amplitudes, alternating the sign of the harmonic
-	 in accordance with the summation formula for a triangle wave.
-	 Multiplying an amplitude by -1 is equivalent to a 180 degree
-	 phase shift for that harmonic. Notice that we are only using 
-	 odd harmonics.
-	 */
-	
-	for( i = 1 ; i < x->bl_harms; i += 2 ){
-		x->amplitudes[i] = sign * 1.0/((float)i * (float)i);
-		x->amplitudes[i + 1] = 0.0;
-		sign *= -1;
-	}
 	
 	/* Build the waveform */
 	
@@ -252,21 +196,7 @@ void osciloscil_triangle(t_osciloscil *x)
 
 void osciloscil_sawtooth(t_osciloscil *x)
 {
-	int i;
-	float sign = 1.0;
-	
-	x->amplitudes[0] = 0.0;
-	x->harmonic_count = x->bl_harms;
-	
-	/* 
-	 Set the amplitudes. Notice that we use both
-	 even and odd harmonics, alternating the sign.
-	 */
-	
-	for(i = 1 ; i < x->bl_harms; i++){
-		x->amplitudes[i] = sign * 1.0/(float)i;
-		sign *= -1. ;
-	}
+
 	osciloscil_build_waveform(x);
 }
 
@@ -274,13 +204,6 @@ void osciloscil_sawtooth(t_osciloscil *x)
 
 void osciloscil_square(t_osciloscil *x)
 {
-	int i;
-	x-> amplitudes [0] = 0.0;
-	x->harmonic_count = x->bl_harms;
-	for(i = 1 ; i < x->bl_harms; i += 2){
-		x->amplitudes[i] = 1.0/(float)i;
-		x->amplitudes[i + 1] = 0.0;
-	}
 	osciloscil_build_waveform(x);
 }
 
@@ -289,18 +212,6 @@ void osciloscil_square(t_osciloscil *x)
 
 void osciloscil_pulse(t_osciloscil *x)
 {
-	int i;
-	x->amplitudes[0] = 0.0;
-	x->harmonic_count = x->bl_harms;
-	
-	/* 
-	 For a pulse wave, all harmonics are
-	 equally weighted.
-	 */
-	
-	for(i = 1 ; i < x->bl_harms; i++){
-		x->amplitudes[i] = 1.0;
-	}
 	osciloscil_build_waveform(x);
 }
 
@@ -310,7 +221,6 @@ void osciloscil_list (t_osciloscil *x, t_symbol *msg, short argc, t_atom *argv)
 {
 	short i;
 	int harmonic_count = 0;
-	float *amplitudes = x->amplitudes;
 	
 	/* Read the list of harmonic weightings from the calling message */
 	
@@ -318,7 +228,6 @@ void osciloscil_list (t_osciloscil *x, t_symbol *msg, short argc, t_atom *argv)
     {
         if (argv[i].a_type == A_FLOAT ){
 
-            amplitudes[harmonic_count++] = atom_getfloat(argv + i);
             post("fa");
         }
         else
@@ -327,7 +236,6 @@ void osciloscil_list (t_osciloscil *x, t_symbol *msg, short argc, t_atom *argv)
 	
 	/* Set the harmonic count to the number of weightings read */
 	
-	x->harmonic_count = harmonic_count;
 	osciloscil_build_waveform(x);
 }
 
@@ -338,11 +246,9 @@ void osciloscil_build_waveform(t_osciloscil *x) {
 	int i, j;
 	float max;
 	float *wavetable = x->wavetable;
-	float *amplitudes = x->amplitudes;
 	
 	/* Add 1 to the harmonic count to account for the DC component */
 	
-	int partial_count = x->harmonic_count + 1; 
 	int table_length = x->table_length;
 	float twopi = x->twopi;
 	float *old_wavetable = x->old_wavetable;
@@ -360,30 +266,6 @@ void osciloscil_build_waveform(t_osciloscil *x) {
 	
 	x->dirty = 1;
 	
-	/* Check for an empty set of weightings */
-	
-	if(partial_count < 1){
-		error("osciloscil~: no harmonics specified, waveform not created.");
-		return;
-	}
-	
-	/* Check that the user has not specified an all zero function */
-	
-	max = 0.0;
-	for(i = 0; i < partial_count; i++){
-		max += fabs(amplitudes[i]);
-	}
-	if(! max){
-		error("osciloscil~: all zero function specified, waveform not created.");
-		return; 
-	}
-	
-	/* Start building the wavetable with the DC component */
-	
-	for(i = 0; i < table_length; i++){
-		wavetable[i] = amplitudes[0];
-	}
-	
 	/* Sum all specified harmonics into the wavetable */
 	
 	for(i = 1 ; i < partial_count; i++){
@@ -397,31 +279,6 @@ void osciloscil_build_waveform(t_osciloscil *x) {
 		}
 	}
 	
-	/* 
-	 Determine the maximum amplitude. Since the waveform is symmetric, 
-	 we only look at the first half 
-	 */
-	
-	max = 0.0;
-	for(i = 0; i < table_length / 2; i++){
-		if(max < fabs(wavetable[i])){
-			max = fabs(wavetable[i]) ;
-		}
-	}
-	
-	/* The following should never happen but it's easy enough to check */
-	
-	if(max == 0.0) {
-		post("osciloscil~: weird all zero error - exiting!");
-		return;
-	}
-	
-	/* Normalize the waveform to maximum amplitude of 1.0 */
-	
-	rescale = 1.0 / max ;
-	for(i = 0; i < table_length; i++){
-		wavetable[i] *= rescale ;
-	}
 	
 	/* Release the new wave table */
 	
@@ -433,11 +290,10 @@ void osciloscil_build_waveform(t_osciloscil *x) {
 
 t_int *osciloscil_perform(t_int *w)
 {
-	
 	t_osciloscil *x = (t_osciloscil *) (w[1]);
 	float *frequency = (t_float *)(w[2]);
-	float *phases= (t_float *)(w[3]);
-	float *waves= (t_float *)(w[4]);
+	float *phases = (t_float *)(w[3]);
+	float *waves = (t_float *)(w[4]);
 	float *out = (t_float *)(w[5]);
 	int n = w[6];
 	
@@ -503,7 +359,6 @@ void osciloscil_free(t_osciloscil *x)
 {
 	t_freebytes(x->wavetable, x->wavetable_bytes);
 	t_freebytes(x->old_wavetable, x->wavetable_bytes);
-	t_freebytes(x->amplitudes, OSCILOSCIL_MAX_HARMS * sizeof(float));
 }
 
 /* The DSP routine */
@@ -521,5 +376,5 @@ void osciloscil_dsp(t_osciloscil *x, t_signal **sp, short *count)
 		x->si_factor = (float) x->table_length / x->sr;
 	}
 	
-	dsp_add(osciloscil_perform, 6, x, sp[0]->s_vec, sp[1]->s_vec, sp[2]->s_vec,sp[3]->s_vec, sp[0]->s_n);
+	dsp_add(osciloscil_perform, 6, x, sp[0]->s_vec, sp[1]->s_vec, sp[2]->s_vec, sp[3]->s_vec, sp[0]->s_n);
 }

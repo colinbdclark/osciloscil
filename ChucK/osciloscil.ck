@@ -77,9 +77,9 @@ a.freq(200);
 a.setoscs(["Phasor", "SinOsc", "Noise"]);
 a.setoscs(["Phasor",  "Noise"]);
 a.setoscs(["Blit", "SqrOsc", "TriOsc", "SinOsc"]);
-a.setoscs(["SinOsc", "SqrOsc"]);
+//a.setoscs(["SinOsc", "SqrOsc"]);
 a.setoscs(["SinOsc", "TriOsc"]);
-a.setoscs(["SinOsc", "SinOsc", "SinOsc", "TriOsc", "TriOsc", "TriOsc"]);
+//a.setoscs(["SinOsc", "SinOsc", "SinOsc", "TriOsc", "TriOsc", "TriOsc"]);
 //a.setoscs( ["SinOsc"] );
 
 while(true)
