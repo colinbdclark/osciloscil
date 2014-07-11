@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Flocking</title>
+          <script src="bower_components/flocking/dist/flocking-all.js"></script>
+          <script src="../osciloscil.js"></script>
+    </head>
+    <body>
+
+        <script>
+            myosc = osciloscil();
+            myosc.setfreq(400);
+            myosc.setwaves(['square','sine']);
+            myosc.synth.play();
+        </script>
+
+    </body>
+</html>
