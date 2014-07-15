@@ -25,20 +25,23 @@
                 }
                 mystring += '</select>';
                 $('#ooforms').append(mystring);
-                        
-                $('#wave'+ooindex).on('change', function(e){
-                    if( $(this).is(":last-child") ){
-                        
-                        addSelector();
-                        mywaves.push( $(this).val() );
-
-                    }
-                    else{
-                        mywaves[0] = $(this).val();    // fix this
-                    }
+                    
+               // using a closure to maintain index of selector after instantiation 
+                $('#wave'+ooindex).on('change', function(i){
+                    return function(e){
+                        var myindex = i;
+                        if( $(this).is(":last-child") ){
+                            mywaves.push( $(this).val() );
+                            addSelector();
+                        }
+                        else{
+                            mywaves[myindex] = $(this).val(); 
+                        }
                         myosc.setWaves(mywaves);
                         console.log( mywaves );
-                });
+                    }
+                }(ooindex));
+
                 ooindex++;
             };
 
