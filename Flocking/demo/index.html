@@ -8,11 +8,48 @@
     </head>
     <body>
 
+        <div id="ooforms">
+
+        </div>
+
+        <script>
+            var ooindex = 0;
+            var mywaves = [];
+            var flockwaves = Object.keys(flock.tableGenerators); // returns array of keys in tableGeneraotrs
+
+            var addSelector = function(){
+
+                var mystring = '<select id=\"wave' + ooindex + '\">';
+                for (var i = 0; i < flockwaves.length; i++){
+                    mystring += '<option>' + flockwaves[i] + '</option>'; 
+                }
+                mystring += '</select>';
+                $('#ooforms').append(mystring);
+                        
+                $('#wave'+ooindex).on('change', function(e){
+                    if( $(this).is(":last-child") ){
+                        
+                        addSelector();
+                        mywaves.push( $(this).val() );
+
+                    }
+                    else{
+                        mywaves[0] = $(this).val();    // fix this
+                    }
+                        myosc.setWaves(mywaves);
+                        console.log( mywaves );
+                });
+                ooindex++;
+            };
+
+            addSelector();
+        </script>
+
         <script>
             myosc = osciloscil();
             myosc.setfreq(400);
             myosc.setWaves(['square','sin']);
-            myosc.synth.play();
+            //myosc.synth.play();
         </script>
 
     </body>
