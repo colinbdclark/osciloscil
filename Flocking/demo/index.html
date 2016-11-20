@@ -9,50 +9,78 @@
     <body>
 
         <div id="ooforms">
-
         </div>
+
+        <button id="starter">Start</button>
+        <button id="stopper">Stop</button>
 
         <script>
             var ooindex = 0;
-            var mywaves = [];
+            var mywaves = ['square', 'sin'];
             var flockwaves = Object.keys(flock.tableGenerators); // returns array of keys in tableGeneraotrs
 
-            var addSelector = function(){
+            var addSelector = function(key){
 
-                var mystring = '<select id=\"wave' + ooindex + '\">';
-                for (var i = 0; i < flockwaves.length; i++){
-                    mystring += '<option>' + flockwaves[i] + '</option>'; 
+                if (typeof key !== "undefined")
+                {
+                    console.log(key);
                 }
-                mystring += '</select>';
-                $('#ooforms').append(mystring);
-                    
-               // using a closure to maintain index of selector after instantiation 
-                $('#wave'+ooindex).on('change', function(i){
-                    return function(e){
-                        var myindex = i;
-                        if( $(this).is(":last-child") ){
-                            mywaves.push( $(this).val() );
-                            addSelector();
-                        }
-                        else{
-                            mywaves[myindex] = $(this).val(); 
-                        }
-                        myosc.setWaves(mywaves);
-                        console.log( mywaves );
+                var myselect = document.createElement("select");
+                myselect.id = "wave" + ooindex;
+                var option = document.createElement("option")
+                option.text = "Select an option";
+                option.setAttribute('disabled', 'disabled');
+                option.setAttribute('selected', 'selected');
+                myselect.appendChild(option);
+
+                for (var i = 0; i < flockwaves.length; i++){
+                    option = document.createElement("option");
+                    option.value = flockwaves[i];
+                    option.text = flockwaves[i];
+                    if(key === flockwaves[i]){
+                        option.setAttribute('selected', 'selected');
                     }
-                }(ooindex));
+                    myselect.appendChild(option);
+                }
+
+                // closure to capture current ooindex value
+                myselect.onchange = (function(i){
+                    return function(){
+                        var myindex = i;
+                        if (this.nextSibling){
+                           mywaves[myindex] = this.value; 
+                        }else{
+                           mywaves.push(this.value);  
+                           addSelector();
+                        }
+                        myosc.setWaves(mywaves); 
+                        console.log(mywaves);
+                    } 
+                })(ooindex);
+
+                document.getElementById("ooforms").appendChild(myselect);
 
                 ooindex++;
             };
-
+                
+            for (var i = 0 ; i < mywaves.length; i++){
+                addSelector(mywaves[i]);
+            }
             addSelector();
-        </script>
 
-        <script>
             myosc = osciloscil();
-            myosc.setfreq(400);
-            myosc.setWaves(['square','sin']);
-            //myosc.synth.play();
+            myosc.setFreq(400);
+            myosc.setWaves(mywaves);
+
+            flock.init();
+
+            document.getElementById("starter").onclick = function(){
+                myosc.synth.play()
+            };
+            document.getElementById("stopper").onclick = function(){
+                myosc.synth.pause()
+            };
+
         </script>
 
     </body>

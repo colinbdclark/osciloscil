@@ -6,9 +6,7 @@ Waveform Modulation implementations
 - Max/MSP/Jitter
 - PureData
 
-
 Upcoming
-- PureData External
 - Flocking.js
+- PureData External
 - Max/MSP/Jitter External
-- Supercollider

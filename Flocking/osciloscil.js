@@ -38,7 +38,7 @@ function osciloscil() {
         return buffer;
     };
 
-    that.setfreq = function(f){
+    that.setFreq = function(f){
         that.synth.set("oscosc.freq", f/numberOfWaves);
     };
 
