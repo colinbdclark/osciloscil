@@ -1,0 +1,14 @@
+#N canvas 569 82 450 300 10;
+#X obj 117 178 osciloscil~;
+#X obj 117 216 dac~;
+#X obj 148 98 phasor~ 20;
+#X obj 148 123 *~ 3;
+#X obj 148 148 wrap~;
+#X floatatom 148 75 5 0 0 0 - - -;
+#X connect 0 0 1 0;
+#X connect 0 0 1 1;
+#X connect 2 0 3 0;
+#X connect 2 0 0 2;
+#X connect 3 0 4 0;
+#X connect 4 0 0 1;
+#X connect 5 0 2 0;

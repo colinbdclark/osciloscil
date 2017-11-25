@@ -6,25 +6,6 @@ function osciloscil() {
     var bufferSize = 1024;
     var waves;
 
-    // Superfluous since Flocking now provides access to tableGenerators
-    /*
-    that.sine = (function(){
-        var buffer = [];
-        for ( var i = 0; i < bufferSize; i++){
-            buffer[i] = Math.sin(i / bufferSize * 2 * Math.PI);
-        }
-        return buffer;
-    })();
-
-    that.square = (function(){
-        var buffer = [];
-        for ( var i = 0; i < bufferSize; i++){
-            buffer[i] = (i < bufferSize / 2) ? 1 : -1;
-        }
-        return buffer;
-    })();
-    */
-
     /* Arguments can be a string, list of strings, or an array of strings */
     that.setWaves = function (waves) {
         waves = fluid.makeArray(waves);
@@ -45,9 +26,9 @@ function osciloscil() {
     that.synth = flock.synth({
         synthDef: {
             id : "oscosc",
-        ugen : "flock.ugen.osc",
-        freq : 100,
-        table : that.setWaves(['sin','square']),
+            ugen : "flock.ugen.osc",
+            freq : 100,
+            table : that.setWaves(['sin','square']),
         }
     });
 

@@ -53,7 +53,7 @@
                            mywaves.push(this.value);  
                            addSelector();
                         }
-                        myosc.setWaves(mywaves); 
+                        myosc.synth.set("oscosc.table", myosc.setWaves(mywaves)); 
                         console.log(mywaves);
                     } 
                 })(ooindex);
