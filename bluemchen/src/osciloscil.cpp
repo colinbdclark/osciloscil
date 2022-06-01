@@ -9,10 +9,14 @@ using namespace daisysp;
 Bluemchen bluemchen;
 
 Oscillator osc;
-float oofreq = 400.0;
+float oofreq = 80.0;
 
 uint numWaves = 2; 
 std::vector<uint> waves = { 0, 1 } ;
+
+std::string waveStrings[] = { "WAVE_SIN", "WAVE_TRI", "WAVE_SAW", "WAVE_RAMP", "WAVE_SQUARE", "WAVE_POLYBLEP_TRI", "WAVE_POLYBLEP_SAW", "WAVE_POLYBLEP_SQUARE", "WAVE_LAST" };
+
+
 uint currentWave = 0;
 
 int enc_val = 0;
@@ -56,11 +60,8 @@ void UpdateOled()
     bluemchen.display.SetCursor(0, 16);
     bluemchen.display.WriteString(cstr, Font_6x8, true);
 
-    if( currentWave == 0 ){
-	    str = "SIN";
-    }else{
-	    str = "TRI";
-    }
+    str = waveStrings[currentWave];
+
     bluemchen.display.SetCursor(12, 16);
     bluemchen.display.WriteString(cstr, Font_6x8, true);
 
@@ -129,13 +130,9 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
 	    out[1][i] = sig;
 
 	    if(osc.IsEOC()){
-		    if( currentWave == 0 ){
-			    osc.SetWaveform( 1 );
-			    currentWave = 1;
-		    }else{
-			    osc.SetWaveform( 0 );
-			    currentWave = 0;
-		    }
+		    currentWave++;
+		    if (currentWave > sizeof(waves)/sizeof(waves[0])-1 ){currentWave = 0;};
+		    osc.SetWaveform( currentWave );
 	    } 
     }
 }
