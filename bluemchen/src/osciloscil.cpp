@@ -9,15 +9,12 @@ using namespace daisysp;
 Bluemchen bluemchen;
 
 Oscillator osc;
-float oofreq = 80.0;
-
-uint numWaves = 2; 
-std::vector<uint> waves = { 0, 1 } ;
-
 std::string waveStrings[] = { "WAVE_SIN", "WAVE_TRI", "WAVE_SAW", "WAVE_RAMP", "WAVE_SQUARE", "WAVE_POLYBLEP_TRI", "WAVE_POLYBLEP_SAW", "WAVE_POLYBLEP_SQUARE", "WAVE_LAST" };
 
-
 uint currentWave = 0;
+float oofreq = 500.0;
+std::vector<uint> waves = { 0, 2, 1, 5 , 0, 0} ;
+bool encoderPrevious = false;
 
 int enc_val = 0;
 int midi_note = 0;
@@ -27,6 +24,15 @@ Parameter knob2;
 Parameter cv1;
 Parameter cv2;
 
+void loadPresets(){
+    //TODO add JSON loading from SD card
+}
+
+void changePreset(char preset){
+    for( int i = 0; i < 6; i++ ){
+        waves[i] = 0;
+    }    
+}
 
 void UpdateOled()
 {
@@ -42,7 +48,6 @@ void UpdateOled()
     bluemchen.display.SetCursor(30, 0);
     bluemchen.display.WriteString(cstr, Font_6x8, !bluemchen.encoder.Pressed());
 
-    // Display the knob values in millivolts
     str = std::to_string(static_cast<int>(knob1.Value()));
     bluemchen.display.SetCursor(0, 8);
     bluemchen.display.WriteString(cstr, Font_6x8, true);
@@ -56,27 +61,19 @@ void UpdateOled()
     bluemchen.display.WriteString(cstr, Font_6x8, true);
 
     // Display Waveform
-    str = "W:";
     bluemchen.display.SetCursor(0, 16);
-    bluemchen.display.WriteString(cstr, Font_6x8, true);
+    std::string wvstring = waveStrings[ waves[currentWave]];
+    wvstring.resize(10);
+    bluemchen.display.WriteString(wvstring.c_str(), Font_6x8, true);
 
-    str = waveStrings[currentWave];
+    // // Display MIDI input note number
+    // str = "M:";
+    // bluemchen.display.SetCursor(36, 16);
+    // bluemchen.display.WriteString(cstr, Font_6x8, true);
 
-    bluemchen.display.SetCursor(12, 16);
-    bluemchen.display.WriteString(cstr, Font_6x8, true);
-
-    str = ":";
-    bluemchen.display.SetCursor(30, 16);
-    bluemchen.display.WriteString(cstr, Font_6x8, true);
-
-    // Display MIDI input note number
-    str = "M:";
-    bluemchen.display.SetCursor(36, 16);
-    bluemchen.display.WriteString(cstr, Font_6x8, true);
-
-    str = std::to_string(static_cast<int>(midi_note));
-    bluemchen.display.SetCursor(48, 16);
-    bluemchen.display.WriteString(cstr, Font_6x8, true);
+    // str = std::to_string(static_cast<int>(midi_note));
+    // bluemchen.display.SetCursor(48, 16);
+    // bluemchen.display.WriteString(cstr, Font_6x8, true);
 
     // Display CV input in millivolts
     str = std::to_string(static_cast<int>(cv1.Value()));
@@ -116,11 +113,14 @@ void UpdateControls()
     cv2.Process();
 
     enc_val += bluemchen.encoder.Increment();
+    osc.SetFreq( oofreq + enc_val );
+
+    if(bluemchen.encoder.Pressed() != encoderPrevious ){
+        changePreset(0);
+    }
+    encoderPrevious = bluemchen.encoder.Pressed();
 }
-
-
-void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
-{
+void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size) {
 
     UpdateControls();
     for( size_t i = 0; i < size; i++){
@@ -131,8 +131,8 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
 
 	    if(osc.IsEOC()){
 		    currentWave++;
-		    if (currentWave > sizeof(waves)/sizeof(waves[0])-1 ){currentWave = 0;};
-		    osc.SetWaveform( currentWave );
+		    if (currentWave == waves.size() ){currentWave = 0;};
+		    osc.SetWaveform( waves[currentWave] );
 	    } 
     }
 }
@@ -143,12 +143,13 @@ int main(void)
     bluemchen.StartAdc();
 
 
-    knob1.Init(bluemchen.controls[bluemchen.CTRL_1], 0.0f, 5000.0f, Parameter::LINEAR);
-    knob2.Init(bluemchen.controls[bluemchen.CTRL_2], 0.0f, 5000.0f, Parameter::LINEAR);
+    knob1.Init(bluemchen.controls[bluemchen.CTRL_1], 0.0f, 5.0f, Parameter::LINEAR);
+    knob2.Init(bluemchen.controls[bluemchen.CTRL_2], 0.0f, 5.0f, Parameter::LINEAR);
 
-    cv1.Init(bluemchen.controls[bluemchen.CTRL_3], -5000.0f, 5000.0f, Parameter::LINEAR);
-    cv2.Init(bluemchen.controls[bluemchen.CTRL_4], -5000.0f, 5000.0f, Parameter::LINEAR);
+    cv1.Init(bluemchen.controls[bluemchen.CTRL_3], 0.0f, 5.99f, Parameter::LINEAR);
+    cv2.Init(bluemchen.controls[bluemchen.CTRL_4], 0.0f, 5.99f, Parameter::LINEAR);
     
+    loadPresets();
 
     osc.Init( bluemchen.AudioSampleRate() );
     osc.SetFreq( oofreq );
