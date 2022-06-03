@@ -17,8 +17,6 @@ uint waveIndexMax = 0;
 uint numberOfWaves = 6;
 uint waves[] = {0, 2 , 1, 0, 5, 0};
 
-float oofreq = 2.0;
-
 bool encoderPrevious = false;
 int enc_val = 0;
 
@@ -28,6 +26,10 @@ Parameter knob1;
 Parameter knob2;
 Parameter cv1;
 Parameter cv2;
+
+
+float cvAmpVal = 0.85;
+float cvFreqVal = 100.0f;
 
 FixedCapStr<20> displayStr;
 
@@ -104,8 +106,8 @@ void HandleMidiMessage(MidiEvent m)
 {
 	if( m.type == NoteOn && m.channel == 1 ){
 		NoteOnEvent p = m.AsNoteOn();
-		oofreq = mtof( p.note );
-		osc.SetFreq( oofreq  );
+		//oofreq = mtof( p.note );
+		// osc.SetFreq( oofreq  );
 	}
 }
 
@@ -125,8 +127,11 @@ void UpdateControls()
     waveIndexMin = static_cast<int>(knob1.Value());
     waveIndexMax = static_cast<int>(knob2.Value());
 
+    cvFreqVal = cv1.Value();
+    cvAmpVal = cv2.Value();
+
     enc_val += bluemchen.encoder.Increment();
-    osc.SetFreq( oofreq + enc_val );
+    //osc.SetFreq( oofreq + enc_val );
 
     if(bluemchen.encoder.Pressed() != encoderPrevious ){
         changePreset(0);
@@ -156,6 +161,8 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
 
 		    osc.SetWaveform( waves[currentWave] );
 	    } 
+        osc.SetAmp( cvAmpVal );
+        osc.SetFreq( cvFreqVal );
     }
 }
 
@@ -167,14 +174,14 @@ int main(void)
     knob1.Init(bluemchen.controls[bluemchen.CTRL_1], 0.0f, 6.0f, Parameter::LINEAR);
     knob2.Init(bluemchen.controls[bluemchen.CTRL_2], 0.0f, 6.0f, Parameter::LINEAR);
 
-    cv1.Init(bluemchen.controls[bluemchen.CTRL_3], 0.0f, 6.00f, Parameter::LINEAR);
-    cv2.Init(bluemchen.controls[bluemchen.CTRL_4], 0.0f, 6.00f, Parameter::LINEAR);
+    cv1.Init(bluemchen.controls[bluemchen.CTRL_3], 0.0f, 10000.00f, Parameter::LOGARITHMIC);
+    cv2.Init(bluemchen.controls[bluemchen.CTRL_4], 0.0f, 0.85f, Parameter::LINEAR);
     
     loadPresets();
 
     osc.Init( bluemchen.AudioSampleRate() );
-    osc.SetFreq( oofreq );
-    osc.SetAmp(0.85f);
+    osc.SetFreq( cvFreqVal );
+    osc.SetAmp( cvAmpVal );
 
     bluemchen.StartAudio(AudioCallback);
 
