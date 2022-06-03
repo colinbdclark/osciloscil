@@ -12,17 +12,25 @@ Oscillator osc;
 std::string waveStrings[] = { "WAVE_SIN", "WAVE_TRI", "WAVE_SAW", "WAVE_RAMP", "WAVE_SQUARE", "WAVE_POLYBLEP_TRI", "WAVE_POLYBLEP_SAW", "WAVE_POLYBLEP_SQUARE", "WAVE_LAST" };
 
 uint currentWave = 0;
-float oofreq = 500.0;
-std::vector<uint> waves = { 0, 2, 1, 5 , 0, 0} ;
-bool encoderPrevious = false;
+uint waveIndexPrevious = 0;
+uint waveIndexMin = 0;
+uint waveIndexMax = 0;
+uint numberOfWaves = 6;
+uint waves[] = {0, 2 , 1, 0, 5, 0};
 
+float oofreq = 2.0;
+
+bool encoderPrevious = false;
 int enc_val = 0;
+
 int midi_note = 0;
 
 Parameter knob1;
 Parameter knob2;
 Parameter cv1;
 Parameter cv2;
+
+FixedCapStr<20> displayStr;
 
 void loadPresets(){
     //TODO add JSON loading from SD card
@@ -64,7 +72,7 @@ void UpdateOled()
     bluemchen.display.SetCursor(0, 16);
     std::string wvstring = waveStrings[ waves[currentWave]];
     wvstring.resize(10);
-    bluemchen.display.WriteString(wvstring.c_str(), Font_6x8, true);
+    bluemchen.display.WriteString(wvstring.c_str(), Font_6x8, currentWave != waveIndexMin );
 
     // // Display MIDI input note number
     // str = "M:";
@@ -112,6 +120,12 @@ void UpdateControls()
     cv1.Process();
     cv2.Process();
 
+    // waveIndexMin = static_cast<int>(cv1.Value());
+    // waveIndexMax = static_cast<int>(cv2.Value());
+
+    waveIndexMin = static_cast<int>(knob1.Value());
+    waveIndexMax = static_cast<int>(knob2.Value());
+
     enc_val += bluemchen.encoder.Increment();
     osc.SetFreq( oofreq + enc_val );
 
@@ -119,6 +133,7 @@ void UpdateControls()
         changePreset(0);
     }
     encoderPrevious = bluemchen.encoder.Pressed();
+
 }
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size) {
 
@@ -130,9 +145,28 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
 	    out[1][i] = sig;
 
 	    if(osc.IsEOC()){
-		    currentWave++;
-		    if (currentWave == waves.size() ){currentWave = 0;};
+		    
+            if(waveIndexMin >= waveIndexMax){
+                currentWave = waveIndexMin;
+                osc.SetWaveform( waves[currentWave] );
+                waveIndexPrevious = currentWave;
+                return;
+            }
+            
+            if(currentWave > waveIndexMax){
+                currentWave = waveIndexMax;
+            } 
+
+            if( currentWave == waveIndexMax || currentWave < waveIndexMin){
+                currentWave = waveIndexMin;
+            }
+             
+            if(waveIndexMin > currentWave && currentWave < waveIndexMax){
+                currentWave++;
+            } 
+
 		    osc.SetWaveform( waves[currentWave] );
+            waveIndexPrevious = currentWave;
 	    } 
     }
 }
@@ -142,12 +176,11 @@ int main(void)
     bluemchen.Init();
     bluemchen.StartAdc();
 
+    knob1.Init(bluemchen.controls[bluemchen.CTRL_1], 0.0f, 6.0f, Parameter::LINEAR);
+    knob2.Init(bluemchen.controls[bluemchen.CTRL_2], 0.0f, 6.0f, Parameter::LINEAR);
 
-    knob1.Init(bluemchen.controls[bluemchen.CTRL_1], 0.0f, 5.0f, Parameter::LINEAR);
-    knob2.Init(bluemchen.controls[bluemchen.CTRL_2], 0.0f, 5.0f, Parameter::LINEAR);
-
-    cv1.Init(bluemchen.controls[bluemchen.CTRL_3], 0.0f, 5.99f, Parameter::LINEAR);
-    cv2.Init(bluemchen.controls[bluemchen.CTRL_4], 0.0f, 5.99f, Parameter::LINEAR);
+    cv1.Init(bluemchen.controls[bluemchen.CTRL_3], 0.0f, 6.00f, Parameter::LINEAR);
+    cv2.Init(bluemchen.controls[bluemchen.CTRL_4], 0.0f, 6.00f, Parameter::LINEAR);
     
     loadPresets();
 
