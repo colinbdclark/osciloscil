@@ -12,7 +12,6 @@ Oscillator osc;
 std::string waveStrings[] = { "WAVE_SIN", "WAVE_TRI", "WAVE_SAW", "WAVE_RAMP", "WAVE_SQUARE", "WAVE_POLYBLEP_TRI", "WAVE_POLYBLEP_SAW", "WAVE_POLYBLEP_SQUARE", "WAVE_LAST" };
 
 uint currentWave = 0;
-uint waveIndexPrevious = 0;
 uint waveIndexMin = 0;
 uint waveIndexMax = 0;
 uint numberOfWaves = 6;
@@ -145,28 +144,17 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
 	    out[1][i] = sig;
 
 	    if(osc.IsEOC()){
+            currentWave++;
 		    
-            if(waveIndexMin >= waveIndexMax){
+            if(waveIndexMin >= waveIndexMax){ // TODO make it work in reverse if max is greater than min
                 currentWave = waveIndexMin;
-                osc.SetWaveform( waves[currentWave] );
-                waveIndexPrevious = currentWave;
-                return;
             }
             
-            if(currentWave > waveIndexMax){
-                currentWave = waveIndexMax;
-            } 
-
-            if( currentWave == waveIndexMax || currentWave < waveIndexMin){
+            if(currentWave > waveIndexMax || currentWave < waveIndexMin){
                 currentWave = waveIndexMin;
-            }
-             
-            if(waveIndexMin > currentWave && currentWave < waveIndexMax){
-                currentWave++;
             } 
 
 		    osc.SetWaveform( waves[currentWave] );
-            waveIndexPrevious = currentWave;
 	    } 
     }
 }
