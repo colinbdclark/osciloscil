@@ -11,9 +11,9 @@ Bluemchen bluemchen;
 Oscillator osc;
 std::string waveStrings[] = { "WAVE_SIN", "WAVE_TRI", "WAVE_SAW", "WAVE_RAMP", "WAVE_SQUARE", "WAVE_POLYBLEP_TRI", "WAVE_POLYBLEP_SAW", "WAVE_POLYBLEP_SQUARE", "WAVE_LAST" };
 
-uint32_t currentWave = 0;
-uint32_t waveIndexMin = 0;
-uint32_t waveIndexMax = 0;
+int32_t currentWave = 0;
+int32_t waveIndexMin = 0;
+int32_t waveIndexMax = 0;
 uint32_t numberOfWaves = 6;
 uint32_t waves[] = {0, 2 , 1, 0, 5, 0};
 
@@ -150,17 +150,28 @@ void AudioCallback(AudioHandle::InputBuffer in,
 	    out[1][i] = sample;
 
 	    if (osc.IsEOC()) {
-            currentWave++;
+            int32_t min = waveIndexMin;
+            int32_t max = waveIndexMax;
 
-            if (waveIndexMin >= waveIndexMax) { // TODO make it work in reverse if max is greater than min
-                currentWave = waveIndexMin;
+            if (waveIndexMin > waveIndexMax) {
+                // The knobs are reversed,
+                // read the wave list backwards.
+                // TODO: There doesn't seem to be an audible
+                // difference between directions in the wave list.
+                currentWave--;
+                min = waveIndexMax;
+                max = waveIndexMin;
+            } else {
+                currentWave++;
             }
 
-            if (currentWave > waveIndexMax || currentWave < waveIndexMin) {
-                currentWave = waveIndexMin;
+            if (currentWave < min) {
+                currentWave = max;
+            } else if (currentWave > max) {
+                currentWave = min;
             }
 
-		    osc.SetWaveform(waves[currentWave]);
+            osc.SetWaveform(waves[currentWave]);
 	    }
     }
 }

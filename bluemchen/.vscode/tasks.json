@@ -24,6 +24,95 @@
             "label": "program",
             "problemMatcher": [],
             "type": "shell"
-        }
+        },
+        {
+            "command": "make",
+            "label": "build_libdaisy",
+            "options": {
+              "cwd": "${workspaceFolder}/vendor/libDaisy"
+            },
+            "problemMatcher": [
+              "$gcc"
+            ],
+            "type": "shell"
+          },
+          {
+            "command": "make clean",
+            "label": "clean_libdaisy",
+            "options": {
+              "cwd": "${workspaceFolder}/vendor/libDaisy"
+            },
+            "problemMatcher": [
+              "$gcc"
+            ],
+            "type": "shell"
+          },
+          {
+            "command": "make",
+            "label": "build_daisysp",
+            "options": {
+              "cwd": "${workspaceFolder}/vendor/DaisySP"
+            },
+            "problemMatcher": [
+              "$gcc"
+            ],
+            "type": "shell"
+          },
+          {
+            "command": "make clean",
+            "label": "clean_daisysp",
+            "options": {
+              "cwd": "${workspaceFolder}/vendor/DaisySP"
+            },
+            "problemMatcher": [
+              "$gcc"
+            ],
+            "type": "shell"
+          },
+          {
+            "command": "make",
+            "dependsOn": [
+              "build_libdaisy",
+              "build_daisysp"
+            ],
+            "label": "build_all",
+            "options": {
+              "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+              "$gcc"
+            ],
+            "type": "shell"
+          },
+          {
+            "command": "DEBUG=1 make",
+            "dependsOn": [
+              "build_libdaisy",
+              "build_daisysp"
+            ],
+            "label": "build_all_debug",
+            "options": {
+              "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+              "$gcc"
+            ],
+            "type": "shell"
+          },
+          {
+            "command": "make clean",
+            "dependsOn": [
+              "clean_libdaisy",
+              "clean_daisysp"
+            ],
+            "label": "clean_all",
+            "options": {
+              "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+              "$gcc"
+            ],
+            "type": "shell"
+          }
     ]
 }
