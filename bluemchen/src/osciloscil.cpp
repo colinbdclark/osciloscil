@@ -1,5 +1,5 @@
 #include "daisysp.h"
-#include "../src/kxmx_bluemchen.h"
+#include "kxmx_bluemchen.h"
 #include <string.h>
 
 using namespace kxmx;
@@ -22,25 +22,25 @@ int enc_val = 0;
 
 int midi_note = 0;
 
-Parameter knob1;
-Parameter knob2;
-Parameter cv1;
-Parameter cv2;
+Parameter waveMinKnob;
+Parameter waveMaxKnob;
+Parameter noteCV;
+Parameter ampCV;
 
 
 float cvAmpVal = 0.85;
 float cvFreqVal = 100.0f;
 
-FixedCapStr<20> displayStr;
-
-void loadPresets(){
+void loadPresets()
+{
     //TODO add JSON loading from SD card
 }
 
-void changePreset(char preset){
+void changePreset(char preset)
+{
     for( int i = 0; i < 6; i++ ){
         waves[i] = 0;
-    }    
+    }
 }
 
 void UpdateOled()
@@ -57,7 +57,7 @@ void UpdateOled()
     bluemchen.display.SetCursor(30, 0);
     bluemchen.display.WriteString(cstr, Font_6x8, !bluemchen.encoder.Pressed());
 
-    str = std::to_string(static_cast<int>(knob1.Value()));
+    str = std::to_string(static_cast<int>(waveMinKnob.Value()));
     bluemchen.display.SetCursor(0, 8);
     bluemchen.display.WriteString(cstr, Font_6x8, true);
 
@@ -65,7 +65,7 @@ void UpdateOled()
     bluemchen.display.SetCursor(30, 8);
     bluemchen.display.WriteString(cstr, Font_6x8, true);
 
-    str = std::to_string(static_cast<int>(knob2.Value()));
+    str = std::to_string(static_cast<int>(waveMaxKnob.Value()));
     bluemchen.display.SetCursor(36, 8);
     bluemchen.display.WriteString(cstr, Font_6x8, true);
 
@@ -85,18 +85,18 @@ void UpdateOled()
     // bluemchen.display.WriteString(cstr, Font_6x8, true);
 
     // Display CV input in millivolts
-    str = std::to_string(static_cast<int>(cv1.Value()));
+    str = std::to_string(static_cast<int>(noteCV.Value()));
     bluemchen.display.SetCursor(0, 24);
     bluemchen.display.WriteString(cstr, Font_6x8, true);
 
-    if (cv2.Value() > -999.0f)
+    if (ampCV.Value() > -999.0f)
     {
         str = ":";
         bluemchen.display.SetCursor(30, 24);
         bluemchen.display.WriteString(cstr, Font_6x8, true);
     }
-    str = std::to_string(static_cast<int>(cv2.Value()));
-    bluemchen.display.SetCursor((cv2.Value() > -999.0f) ? 36 : 30, 24);
+    str = std::to_string(static_cast<int>(ampCV.Value()));
+    bluemchen.display.SetCursor((ampCV.Value() > -999.0f) ? 36 : 30, 24);
     bluemchen.display.WriteString(cstr, Font_6x8, true);
 
     bluemchen.display.Update();
@@ -105,7 +105,7 @@ void UpdateOled()
 void HandleMidiMessage(MidiEvent m)
 {
 	if( m.type == NoteOn && m.channel == 1 ){
-		NoteOnEvent p = m.AsNoteOn();
+		// NoteOnEvent p = m.AsNoteOn();
 		//oofreq = mtof( p.note );
 		// osc.SetFreq( oofreq  );
 	}
@@ -113,22 +113,17 @@ void HandleMidiMessage(MidiEvent m)
 
 void UpdateControls()
 {
-    bluemchen.ProcessAllControls();
+    waveMinKnob.Process();
+    waveMaxKnob.Process();
 
-    knob1.Process();
-    knob2.Process();
+    noteCV.Process();
+    ampCV.Process();
 
-    cv1.Process();
-    cv2.Process();
+    waveIndexMin = static_cast<int>(waveMinKnob.Value());
+    waveIndexMax = static_cast<int>(waveMaxKnob.Value());
 
-    // waveIndexMin = static_cast<int>(cv1.Value());
-    // waveIndexMax = static_cast<int>(cv2.Value());
-
-    waveIndexMin = static_cast<int>(knob1.Value());
-    waveIndexMax = static_cast<int>(knob2.Value());
-
-    cvFreqVal = cv1.Value();
-    cvAmpVal = cv2.Value();
+    cvFreqVal = mtof(noteCV.Value());
+    cvAmpVal = ampCV.Value();
 
     enc_val += bluemchen.encoder.Increment();
     //osc.SetFreq( oofreq + enc_val );
@@ -142,27 +137,27 @@ void UpdateControls()
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size) {
 
     UpdateControls();
-    for( size_t i = 0; i < size; i++){
+    for (size_t i = 0; i < size; i++){
 	    float sig;
 	    sig = osc.Process();
 	    out[0][i] = sig;
 	    out[1][i] = sig;
 
-	    if(osc.IsEOC()){
+	    if (osc.IsEOC()){
             currentWave++;
-		    
-            if(waveIndexMin >= waveIndexMax){ // TODO make it work in reverse if max is greater than min
+
+            if (waveIndexMin >= waveIndexMax){ // TODO make it work in reverse if max is greater than min
                 currentWave = waveIndexMin;
             }
-            
-            if(currentWave > waveIndexMax || currentWave < waveIndexMin){
-                currentWave = waveIndexMin;
-            } 
 
-		    osc.SetWaveform( waves[currentWave] );
-	    } 
-        osc.SetAmp( cvAmpVal );
-        osc.SetFreq( cvFreqVal );
+            if (currentWave > waveIndexMax || currentWave < waveIndexMin){
+                currentWave = waveIndexMin;
+            }
+
+		    osc.SetWaveform(waves[currentWave]);
+	    }
+        osc.SetAmp(cvAmpVal);
+        osc.SetFreq(cvFreqVal);
     }
 }
 
@@ -171,17 +166,17 @@ int main(void)
     bluemchen.Init();
     bluemchen.StartAdc();
 
-    knob1.Init(bluemchen.controls[bluemchen.CTRL_1], 0.0f, 6.0f, Parameter::LINEAR);
-    knob2.Init(bluemchen.controls[bluemchen.CTRL_2], 0.0f, 6.0f, Parameter::LINEAR);
+    waveMinKnob.Init(bluemchen.controls[bluemchen.CTRL_1], 0.0f, 6.0f, Parameter::LINEAR);
+    waveMaxKnob.Init(bluemchen.controls[bluemchen.CTRL_2], 0.0f, 6.0f, Parameter::LINEAR);
 
-    cv1.Init(bluemchen.controls[bluemchen.CTRL_3], 0.0f, 10000.00f, Parameter::LOGARITHMIC);
-    cv2.Init(bluemchen.controls[bluemchen.CTRL_4], 0.0f, 0.85f, Parameter::LINEAR);
-    
+    noteCV.Init(bluemchen.controls[bluemchen.CTRL_3], 0.0f, 127.0f, Parameter::LINEAR);
+    ampCV.Init(bluemchen.controls[bluemchen.CTRL_4], 0.0f, 0.85f, Parameter::LINEAR);
+
     loadPresets();
 
-    osc.Init( bluemchen.AudioSampleRate() );
-    osc.SetFreq( cvFreqVal );
-    osc.SetAmp( cvAmpVal );
+    osc.Init(bluemchen.AudioSampleRate());
+    osc.SetFreq(cvFreqVal);
+    osc.SetAmp(cvAmpVal);
 
     bluemchen.StartAudio(AudioCallback);
 
