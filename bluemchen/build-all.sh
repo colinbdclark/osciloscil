@@ -1,10 +1,10 @@
 #!/bin/sh
 
 cd vendor/libDaisy
-make
+make $1
 
 cd ../DaisySP
-make
+make $1
 
 cd ../..
-make
+make $1

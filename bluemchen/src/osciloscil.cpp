@@ -11,16 +11,16 @@ Bluemchen bluemchen;
 Oscillator osc;
 std::string waveStrings[] = { "WAVE_SIN", "WAVE_TRI", "WAVE_SAW", "WAVE_RAMP", "WAVE_SQUARE", "WAVE_POLYBLEP_TRI", "WAVE_POLYBLEP_SAW", "WAVE_POLYBLEP_SQUARE", "WAVE_LAST" };
 
-uint currentWave = 0;
-uint waveIndexMin = 0;
-uint waveIndexMax = 0;
-uint numberOfWaves = 6;
-uint waves[] = {0, 2 , 1, 0, 5, 0};
+uint32_t currentWave = 0;
+uint32_t waveIndexMin = 0;
+uint32_t waveIndexMax = 0;
+uint32_t numberOfWaves = 6;
+uint32_t waves[] = {0, 2 , 1, 0, 5, 0};
 
 bool encoderPrevious = false;
-int enc_val = 0;
+int32_t enc_val = 0;
 
-int midi_note = 0;
+int32_t midi_note = 0;
 
 Parameter waveMinKnob;
 Parameter waveMaxKnob;
@@ -28,17 +28,17 @@ Parameter noteCV;
 Parameter ampCV;
 
 
-float cvAmpVal = 0.85;
+float cvAmpVal = 0.85f;
 float cvFreqVal = 100.0f;
 
-void loadPresets()
+void LoadPresets()
 {
     //TODO add JSON loading from SD card
 }
 
-void changePreset(char preset)
+void ChangePreset(char preset)
 {
-    for( int i = 0; i < 6; i++ ){
+    for (uint32_t i = 0; i < numberOfWaves; i++ ){
         waves[i] = 0;
     }
 }
@@ -89,6 +89,7 @@ void UpdateOled()
     bluemchen.display.SetCursor(0, 24);
     bluemchen.display.WriteString(cstr, Font_6x8, true);
 
+    // TODO: This doesn't work; amplitude is never updated.
     if (ampCV.Value() > -999.0f)
     {
         str = ":";
@@ -128,8 +129,8 @@ void UpdateControls()
     enc_val += bluemchen.encoder.Increment();
     //osc.SetFreq( oofreq + enc_val );
 
-    if(bluemchen.encoder.Pressed() != encoderPrevious ){
-        changePreset(0);
+    if (bluemchen.encoder.Pressed() != encoderPrevious ){
+        ChangePreset(0);
     }
     encoderPrevious = bluemchen.encoder.Pressed();
 
@@ -137,28 +138,48 @@ void UpdateControls()
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size) {
 
     UpdateControls();
-    for (size_t i = 0; i < size; i++){
-	    float sig;
-	    sig = osc.Process();
-	    out[0][i] = sig;
-	    out[1][i] = sig;
+    for (size_t i = 0; i < size; i++) {
+        osc.SetAmp(cvAmpVal);
+        osc.SetFreq(cvFreqVal);
 
-	    if (osc.IsEOC()){
+	    float sample = osc.Process();
+	    out[0][i] = sample;
+	    out[1][i] = sample;
+
+	    if (osc.IsEOC()) {
             currentWave++;
 
-            if (waveIndexMin >= waveIndexMax){ // TODO make it work in reverse if max is greater than min
+            if (waveIndexMin >= waveIndexMax) { // TODO make it work in reverse if max is greater than min
                 currentWave = waveIndexMin;
             }
 
-            if (currentWave > waveIndexMax || currentWave < waveIndexMin){
+            if (currentWave > waveIndexMax || currentWave < waveIndexMin) {
                 currentWave = waveIndexMin;
             }
 
 		    osc.SetWaveform(waves[currentWave]);
 	    }
-        osc.SetAmp(cvAmpVal);
-        osc.SetFreq(cvFreqVal);
     }
+}
+
+void ProcessMidi() {
+    bluemchen.midi.Listen();
+    while (bluemchen.midi.HasEvents())
+    {
+        HandleMidiMessage(bluemchen.midi.PopEvent());
+    }
+}
+
+void InitializeControls() {
+    waveMinKnob.Init(bluemchen.controls[bluemchen.CTRL_1], 0.0f,
+        (float) numberOfWaves, Parameter::LINEAR);
+    waveMaxKnob.Init(bluemchen.controls[bluemchen.CTRL_2], 0.0f,
+        (float) numberOfWaves, Parameter::LINEAR);
+
+    noteCV.Init(bluemchen.controls[bluemchen.CTRL_3], 0.0f, 127.0f,
+        Parameter::LINEAR);
+    ampCV.Init(bluemchen.controls[bluemchen.CTRL_4], 0.0f, 0.85f,
+        Parameter::LINEAR);
 }
 
 int main(void)
@@ -166,29 +187,16 @@ int main(void)
     bluemchen.Init();
     bluemchen.StartAdc();
 
-    waveMinKnob.Init(bluemchen.controls[bluemchen.CTRL_1], 0.0f, 6.0f, Parameter::LINEAR);
-    waveMaxKnob.Init(bluemchen.controls[bluemchen.CTRL_2], 0.0f, 6.0f, Parameter::LINEAR);
-
-    noteCV.Init(bluemchen.controls[bluemchen.CTRL_3], 0.0f, 127.0f, Parameter::LINEAR);
-    ampCV.Init(bluemchen.controls[bluemchen.CTRL_4], 0.0f, 0.85f, Parameter::LINEAR);
-
-    loadPresets();
+    InitializeControls();
+    LoadPresets();
 
     osc.Init(bluemchen.AudioSampleRate());
-    osc.SetFreq(cvFreqVal);
-    osc.SetAmp(cvAmpVal);
-
     bluemchen.StartAudio(AudioCallback);
 
     while (1)
     {
         UpdateControls();
         UpdateOled();
-
-        bluemchen.midi.Listen();
-        while (bluemchen.midi.HasEvents())
-        {
-            HandleMidiMessage(bluemchen.midi.PopEvent());
-        }
+        ProcessMidi();
     }
 }
