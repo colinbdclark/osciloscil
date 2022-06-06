@@ -120,8 +120,10 @@ void UpdateControls()
     noteCV.Process();
     ampCV.Process();
 
-    waveIndexMin = static_cast<int>(waveMinKnob.Value());
-    waveIndexMax = static_cast<int>(waveMaxKnob.Value());
+    float minRounded = roundf(waveMinKnob.Value());
+    float maxRounded = roundf(waveMaxKnob.Value());
+    waveIndexMin = static_cast<uint32_t>(minRounded);
+    waveIndexMax = static_cast<uint32_t>(maxRounded);
 
     cvFreqVal = mtof(noteCV.Value());
     cvAmpVal = ampCV.Value();
@@ -172,10 +174,11 @@ void ProcessMidi() {
 }
 
 void InitializeControls() {
+    float maxWaveIdx = (float) numberOfWaves - 1;
     waveMinKnob.Init(bluemchen.controls[bluemchen.CTRL_1], 0.0f,
-        (float) numberOfWaves, Parameter::LINEAR);
+        maxWaveIdx, Parameter::LINEAR);
     waveMaxKnob.Init(bluemchen.controls[bluemchen.CTRL_2], 0.0f,
-        (float) numberOfWaves, Parameter::LINEAR);
+        maxWaveIdx, Parameter::LINEAR);
 
     noteCV.Init(bluemchen.controls[bluemchen.CTRL_3], 0.0f, 127.0f,
         Parameter::LINEAR);
