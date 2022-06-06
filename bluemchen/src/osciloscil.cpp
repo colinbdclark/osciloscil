@@ -57,7 +57,7 @@ void UpdateOled()
     bluemchen.display.SetCursor(30, 0);
     bluemchen.display.WriteString(cstr, Font_6x8, !bluemchen.encoder.Pressed());
 
-    str = std::to_string(static_cast<int>(waveMinKnob.Value()));
+    str = std::to_string(waveIndexMin);
     bluemchen.display.SetCursor(0, 8);
     bluemchen.display.WriteString(cstr, Font_6x8, true);
 
@@ -65,7 +65,7 @@ void UpdateOled()
     bluemchen.display.SetCursor(30, 8);
     bluemchen.display.WriteString(cstr, Font_6x8, true);
 
-    str = std::to_string(static_cast<int>(waveMaxKnob.Value()));
+    str = std::to_string(waveIndexMax);
     bluemchen.display.SetCursor(36, 8);
     bluemchen.display.WriteString(cstr, Font_6x8, true);
 
@@ -105,7 +105,7 @@ void UpdateOled()
 
 void HandleMidiMessage(MidiEvent m)
 {
-	if( m.type == NoteOn && m.channel == 1 ){
+	if(m.type == NoteOn && m.channel == 1){
 		// NoteOnEvent p = m.AsNoteOn();
 		//oofreq = mtof( p.note );
 		// osc.SetFreq( oofreq  );
@@ -129,13 +129,14 @@ void UpdateControls()
     enc_val += bluemchen.encoder.Increment();
     //osc.SetFreq( oofreq + enc_val );
 
-    if (bluemchen.encoder.Pressed() != encoderPrevious ){
+    if (bluemchen.encoder.Pressed() != encoderPrevious) {
         ChangePreset(0);
     }
     encoderPrevious = bluemchen.encoder.Pressed();
-
 }
-void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size) {
+
+void AudioCallback(AudioHandle::InputBuffer in,
+    AudioHandle::OutputBuffer out, size_t size) {
 
     UpdateControls();
     for (size_t i = 0; i < size; i++) {
