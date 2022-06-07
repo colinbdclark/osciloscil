@@ -8,6 +8,8 @@ using namespace daisysp;
 
 Bluemchen bluemchen;
 
+CpuLoadMeter meter;
+
 Oscillator osc;
 std::string waveStrings[] = { "Sine", "Tri", "Saw", "Ramp", "Square", "BLTri", "BLSaw", "BLSquare"};
 
@@ -47,14 +49,14 @@ void UpdateOled()
 {
     bluemchen.display.Fill(false);
 
-    // Display Encoder test increment value and pressed state
+    // Display CPU stats.
     bluemchen.display.SetCursor(0, 0);
-    std::string str = "Enc: ";
+    std::string str = "CPU: ";
     char *cstr = &str[0];
     bluemchen.display.WriteString(cstr, Font_6x8, true);
-    str = std::to_string(encoderVal);
+    str = std::to_string(static_cast<uint32_t>(meter.GetAvgCpuLoad() * 100.0f)) + "%";
     bluemchen.display.SetCursor(30, 0);
-    bluemchen.display.WriteString(cstr, Font_6x8, !bluemchen.encoder.Pressed());
+    bluemchen.display.WriteString(cstr, Font_6x8, true);
 
     // Wave min/max indices.
     str = std::to_string(waveIndexMin);
@@ -135,6 +137,8 @@ void UpdateControls()
 
 void AudioCallback(AudioHandle::InputBuffer in,
     AudioHandle::OutputBuffer out, size_t size) {
+    meter.OnBlockStart();
+
     UpdateControls();
 
     for (size_t i = 0; i < size; i++) {
@@ -170,6 +174,7 @@ void AudioCallback(AudioHandle::InputBuffer in,
             osc.SetWaveform(waves[currentWave]);
 	    }
     }
+    meter.OnBlockEnd();
 }
 
 void ProcessMidi() {
@@ -203,11 +208,14 @@ int main(void)
     InitializeControls();
     LoadPresets();
 
+    meter.Init(bluemchen.AudioSampleRate(),
+        bluemchen.AudioBlockSize());
+
     osc.Init(bluemchen.AudioSampleRate());
     bluemchen.StartAudio(AudioCallback);
     bluemchen.midi.StartReceive();
 
-    // TODO: Factor this better or remove.
+    // TODO: Improve the factoring of this or remove it.
     uint32_t lastDrawTime = System::GetNow();
     uint32_t now;
 
