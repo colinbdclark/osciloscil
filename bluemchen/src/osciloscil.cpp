@@ -118,10 +118,9 @@ void UpdateControls()
     noteCV.Process();
     ampCV.Process();
 
-    float minRounded = roundf(waveMinKnob.Value());
-    float maxRounded = roundf(waveMaxKnob.Value());
-    waveIndexMin = static_cast<uint32_t>(minRounded);
-    waveIndexMax = static_cast<uint32_t>(maxRounded);
+    // Truncate knob values into wave table indices.
+    waveIndexMin = static_cast<uint32_t>(waveMinKnob.Value());
+    waveIndexMax = static_cast<uint32_t>(waveMaxKnob.Value());
 
     cvFreqVal = mtof(noteCV.Value());
     cvAmpVal = ampCV.Value();
@@ -182,7 +181,9 @@ void ProcessMidi() {
 }
 
 void InitializeControls() {
-    float maxWaveIdx = (float) numberOfWaves - 1;
+    // Ensure the max wave index value won't be too high
+    // when it is truncated (if the voltage reaches +5V).
+    float maxWaveIdx = ((float) numberOfWaves) - 0.001f;
     waveMinKnob.Init(bluemchen.controls[bluemchen.CTRL_1], 0.0f,
         maxWaveIdx, Parameter::LINEAR);
     waveMaxKnob.Init(bluemchen.controls[bluemchen.CTRL_2], 0.0f,
