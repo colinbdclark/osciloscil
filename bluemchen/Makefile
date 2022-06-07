@@ -1,12 +1,8 @@
 # Project Name
 TARGET ?= osciloscil
 
-DEBUG = 1
-OPT = -O0
-
 # Sources
 CPP_SOURCES = src/kxmx_bluemchen.cpp src/${TARGET}.cpp
-
 USE_FATFS = 1
 
 # Library Locations

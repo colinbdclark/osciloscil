@@ -9,7 +9,7 @@ using namespace daisysp;
 Bluemchen bluemchen;
 
 Oscillator osc;
-std::string waveStrings[] = { "WAVE_SIN", "WAVE_TRI", "WAVE_SAW", "WAVE_RAMP", "WAVE_SQUARE", "WAVE_POLYBLEP_TRI", "WAVE_POLYBLEP_SAW", "WAVE_POLYBLEP_SQUARE", "WAVE_LAST" };
+std::string waveStrings[] = { "Sine", "Tri", "Saw", "Ramp", "Square", "BLTri", "BLSaw", "BLSquare"};
 
 int32_t currentWave = 0;
 int32_t waveIndexMin = 0;
@@ -17,23 +17,22 @@ int32_t waveIndexMax = 0;
 uint32_t numberOfWaves = 6;
 uint32_t waves[] = {0, 2 , 1, 0, 5, 0};
 
-bool encoderPrevious = false;
-int32_t enc_val = 0;
+float cvAmpVal = 0.85f;
+float cvFreqVal = 100.0f;
 
-int32_t midi_note = 0;
+int32_t midiNote = -1;
+
+bool encoderPrevious = false;
+int32_t encoderVal = 0;
 
 Parameter waveMinKnob;
 Parameter waveMaxKnob;
 Parameter noteCV;
 Parameter ampCV;
 
-
-float cvAmpVal = 0.85f;
-float cvFreqVal = 100.0f;
-
 void LoadPresets()
 {
-    //TODO add JSON loading from SD card
+    // TODO add JSON (or CSV?) loading from SD card.
 }
 
 void ChangePreset(char preset)
@@ -53,7 +52,7 @@ void UpdateOled()
     char *cstr = &str[0];
     bluemchen.display.WriteString(cstr, Font_6x8, true);
 
-    str = std::to_string(enc_val);
+    str = std::to_string(encoderVal);
     bluemchen.display.SetCursor(30, 0);
     bluemchen.display.WriteString(cstr, Font_6x8, !bluemchen.encoder.Pressed());
 
@@ -80,7 +79,7 @@ void UpdateOled()
     // bluemchen.display.SetCursor(36, 16);
     // bluemchen.display.WriteString(cstr, Font_6x8, true);
 
-    // str = std::to_string(static_cast<int>(midi_note));
+    // str = std::to_string(static_cast<int>(midiNote));
     // bluemchen.display.SetCursor(48, 16);
     // bluemchen.display.WriteString(cstr, Font_6x8, true);
 
@@ -105,11 +104,16 @@ void UpdateOled()
 
 void HandleMidiMessage(MidiEvent m)
 {
-	if(m.type == NoteOn && m.channel == 1){
-		// NoteOnEvent p = m.AsNoteOn();
-		//oofreq = mtof( p.note );
-		// osc.SetFreq( oofreq  );
-	}
+    // Currently, we only support omni mode,
+    // but channel filtering would otherwise go here.
+
+    if (m.type == NoteOn) {
+        midiNote = m.AsNoteOn().note;
+    } else if (m.type == NoteOff) {
+        if (m.AsNoteOff().note == midiNote) {
+            midiNote = -1;
+        }
+    }
 }
 
 void UpdateControls()
@@ -128,8 +132,7 @@ void UpdateControls()
     cvFreqVal = mtof(noteCV.Value());
     cvAmpVal = ampCV.Value();
 
-    enc_val += bluemchen.encoder.Increment();
-    //osc.SetFreq( oofreq + enc_val );
+    encoderVal += bluemchen.encoder.Increment();
 
     if (bluemchen.encoder.Pressed() != encoderPrevious) {
         ChangePreset(0);
@@ -139,11 +142,11 @@ void UpdateControls()
 
 void AudioCallback(AudioHandle::InputBuffer in,
     AudioHandle::OutputBuffer out, size_t size) {
-
     UpdateControls();
+
     for (size_t i = 0; i < size; i++) {
         osc.SetAmp(cvAmpVal);
-        osc.SetFreq(cvFreqVal);
+        osc.SetFreq(midiNote > -1 ? mtof(midiNote) : cvFreqVal);
 
 	    float sample = osc.Process();
 	    out[0][i] = sample;
@@ -200,6 +203,8 @@ void InitializeControls() {
 int main(void)
 {
     bluemchen.Init();
+    bluemchen.midi.StartReceive();
+
     bluemchen.StartAdc();
 
     InitializeControls();
@@ -210,7 +215,6 @@ int main(void)
 
     while (1)
     {
-        UpdateControls();
         UpdateOled();
         ProcessMidi();
     }
