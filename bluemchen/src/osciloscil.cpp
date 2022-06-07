@@ -21,6 +21,7 @@ float cvAmpVal = 0.85f;
 float cvFreqVal = 100.0f;
 
 int32_t midiNote = -1;
+float midiNoteFreq = 0.0f;
 
 bool encoderPrevious = false;
 int32_t encoderVal = 0;
@@ -51,21 +52,17 @@ void UpdateOled()
     std::string str = "Enc: ";
     char *cstr = &str[0];
     bluemchen.display.WriteString(cstr, Font_6x8, true);
-
     str = std::to_string(encoderVal);
     bluemchen.display.SetCursor(30, 0);
     bluemchen.display.WriteString(cstr, Font_6x8, !bluemchen.encoder.Pressed());
 
+    // Wave min/max indices.
     str = std::to_string(waveIndexMin);
     bluemchen.display.SetCursor(0, 8);
     bluemchen.display.WriteString(cstr, Font_6x8, true);
 
-    str = ":";
-    bluemchen.display.SetCursor(30, 8);
-    bluemchen.display.WriteString(cstr, Font_6x8, true);
-
     str = std::to_string(waveIndexMax);
-    bluemchen.display.SetCursor(36, 8);
+    bluemchen.display.SetCursor(54, 8);
     bluemchen.display.WriteString(cstr, Font_6x8, true);
 
     // Display Waveform
@@ -74,29 +71,25 @@ void UpdateOled()
     wvstring.resize(10);
     bluemchen.display.WriteString(wvstring.c_str(), Font_6x8, currentWave != waveIndexMin );
 
-    // // Display MIDI input note number
-    // str = "M:";
-    // bluemchen.display.SetCursor(36, 16);
-    // bluemchen.display.WriteString(cstr, Font_6x8, true);
+    // Display MIDI input note number
+    str = "M:";
+    bluemchen.display.SetCursor(36, 16);
+    bluemchen.display.WriteString(cstr, Font_6x8, true);
+    str = std::to_string(static_cast<int>(midiNote));
+    bluemchen.display.SetCursor(48, 16);
+    bluemchen.display.WriteString(cstr, Font_6x8, true);
 
-    // str = std::to_string(static_cast<int>(midiNote));
-    // bluemchen.display.SetCursor(48, 16);
-    // bluemchen.display.WriteString(cstr, Font_6x8, true);
-
-    // Display CV input in millivolts
+    // CV note input
     str = std::to_string(static_cast<int>(noteCV.Value()));
     bluemchen.display.SetCursor(0, 24);
     bluemchen.display.WriteString(cstr, Font_6x8, true);
 
-    // TODO: This doesn't work; amplitude is never updated.
-    if (ampCV.Value() > -999.0f)
-    {
-        str = ":";
-        bluemchen.display.SetCursor(30, 24);
-        bluemchen.display.WriteString(cstr, Font_6x8, true);
-    }
-    str = std::to_string(static_cast<int>(ampCV.Value()));
-    bluemchen.display.SetCursor((ampCV.Value() > -999.0f) ? 36 : 30, 24);
+    // CV amplitude
+    // TODO: Use FixCapString so that we can print floats
+    // instead of scaling this to a weird int value
+    // because libDaisy doesn't include float formatters.
+    str = std::to_string(static_cast<int>(ampCV.Value() * 100));
+    bluemchen.display.SetCursor(48, 24);
     bluemchen.display.WriteString(cstr, Font_6x8, true);
 
     bluemchen.display.Update();
@@ -109,6 +102,7 @@ void HandleMidiMessage(MidiEvent m)
 
     if (m.type == NoteOn) {
         midiNote = m.AsNoteOn().note;
+        midiNoteFreq = mtof(midiNote);
     } else if (m.type == NoteOff) {
         if (m.AsNoteOff().note == midiNote) {
             midiNote = -1;
@@ -146,7 +140,7 @@ void AudioCallback(AudioHandle::InputBuffer in,
 
     for (size_t i = 0; i < size; i++) {
         osc.SetAmp(cvAmpVal);
-        osc.SetFreq(midiNote > -1 ? mtof(midiNote) : cvFreqVal);
+        osc.SetFreq(midiNote > -1 ? midiNoteFreq : cvFreqVal);
 
 	    float sample = osc.Process();
 	    out[0][i] = sample;
@@ -203,8 +197,6 @@ void InitializeControls() {
 int main(void)
 {
     bluemchen.Init();
-    bluemchen.midi.StartReceive();
-
     bluemchen.StartAdc();
 
     InitializeControls();
@@ -212,10 +204,19 @@ int main(void)
 
     osc.Init(bluemchen.AudioSampleRate());
     bluemchen.StartAudio(AudioCallback);
+    bluemchen.midi.StartReceive();
+
+    // TODO: Factor this better or remove.
+    uint32_t lastDrawTime = System::GetNow();
+    uint32_t now;
 
     while (1)
     {
-        UpdateOled();
+        now = System::GetNow();
+        if (now - lastDrawTime >= 40) { // 25 fps
+            UpdateOled();
+            lastDrawTime = now;
+        }
         ProcessMidi();
     }
 }
