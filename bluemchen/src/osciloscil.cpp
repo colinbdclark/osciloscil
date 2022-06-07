@@ -21,7 +21,6 @@ uint32_t waves[] = {0, 2 , 1, 0, 5, 0};
 
 float cvAmpVal = 0.85f;
 float cvFreqVal = 100.0f;
-
 int32_t midiNote = -1;
 float midiNoteFreq = 0.0f;
 
@@ -97,18 +96,32 @@ void UpdateOled()
     bluemchen.display.Update();
 }
 
+void HandleNoteOn(uint8_t note) {
+    midiNote = note;
+    midiNoteFreq = mtof(midiNote);
+}
+
+void HandleNoteOff(uint8_t note) {
+    if (note == midiNote) {
+        midiNote = -1;
+    }
+}
+
 void HandleMidiMessage(MidiEvent m)
 {
     // Currently, we only support omni mode,
     // but channel filtering would otherwise go here.
 
     if (m.type == NoteOn) {
-        midiNote = m.AsNoteOn().note;
-        midiNoteFreq = mtof(midiNote);
-    } else if (m.type == NoteOff) {
-        if (m.AsNoteOff().note == midiNote) {
-            midiNote = -1;
+        NoteOnEvent e = m.AsNoteOn();
+        if (e.velocity > 0) {
+            HandleNoteOn(e.note);
+        } else {
+            // Note on with velocity zero is note off
+            HandleNoteOff(e.note);
         }
+    } else if (m.type == NoteOff) {
+        HandleNoteOff(m.AsNoteOff().note);
     }
 }
 
@@ -142,10 +155,9 @@ void AudioCallback(AudioHandle::InputBuffer in,
     UpdateControls();
 
     for (size_t i = 0; i < size; i++) {
-        osc.SetAmp(cvAmpVal);
         osc.SetFreq(midiNote > -1 ? midiNoteFreq : cvFreqVal);
 
-	    float sample = osc.Process();
+	    float sample = osc.Process() * cvAmpVal;
 	    out[0][i] = sample;
 	    out[1][i] = sample;
 
@@ -156,8 +168,6 @@ void AudioCallback(AudioHandle::InputBuffer in,
             if (waveIndexMin > waveIndexMax) {
                 // The knobs are reversed,
                 // read the wave list backwards.
-                // TODO: There doesn't seem to be an audible
-                // difference between directions in the wave list.
                 currentWave--;
                 min = waveIndexMax;
                 max = waveIndexMin;
@@ -189,6 +199,7 @@ void InitializeControls() {
     // Ensure the max wave index value won't be too high
     // when it is truncated (if the voltage reaches +5V).
     float maxWaveIdx = ((float) numberOfWaves) - 0.001f;
+
     waveMinKnob.Init(bluemchen.controls[bluemchen.CTRL_1], 0.0f,
         maxWaveIdx, Parameter::LINEAR);
     waveMaxKnob.Init(bluemchen.controls[bluemchen.CTRL_2], 0.0f,
@@ -207,11 +218,11 @@ int main(void)
 
     InitializeControls();
     LoadPresets();
-
     meter.Init(bluemchen.AudioSampleRate(),
         bluemchen.AudioBlockSize());
-
     osc.Init(bluemchen.AudioSampleRate());
+    osc.SetAmp(1.0f);
+
     bluemchen.StartAudio(AudioCallback);
     bluemchen.midi.StartReceive();
 
