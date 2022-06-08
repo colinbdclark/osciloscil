@@ -11,7 +11,8 @@ Bluemchen bluemchen;
 CpuLoadMeter meter;
 
 Oscillator osc;
-std::string waveStrings[] = { "Sine", "Tri", "Saw", "Ramp", "Square", "BLTri", "BLSaw", "BLSquare"};
+std::string waveStrings[] = {"Sine", "Tri", "Saw", "Ramp",
+    "Square", "BLTri", "BLSaw", "BLSquare"};
 
 int32_t currentWave = 0;
 int32_t waveIndexMin = 0;
@@ -53,7 +54,8 @@ void UpdateOled()
     std::string str = "CPU: ";
     char *cstr = &str[0];
     bluemchen.display.WriteString(cstr, Font_6x8, true);
-    str = std::to_string(static_cast<uint32_t>(meter.GetAvgCpuLoad() * 100.0f)) + "%";
+    float cpuPercent = meter.GetAvgCpuLoad() * 100.0f;
+    str = std::to_string(static_cast<uint32_t>(cpuPercent)) + "%";
     bluemchen.display.SetCursor(30, 0);
     bluemchen.display.WriteString(cstr, Font_6x8, true);
 
@@ -68,7 +70,7 @@ void UpdateOled()
 
     // Display Waveform
     bluemchen.display.SetCursor(0, 16);
-    std::string wvstring = waveStrings[ waves[currentWave]];
+    std::string wvstring = waveStrings[waves[currentWave]];
     wvstring.resize(10);
     bluemchen.display.WriteString(wvstring.c_str(), Font_6x8, currentWave != waveIndexMin );
 
